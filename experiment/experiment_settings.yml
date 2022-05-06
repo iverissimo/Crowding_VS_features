@@ -1,0 +1,76 @@
+
+preferences:
+  general:
+    audioLib: sounddevice
+    units: deg
+
+window: # refers to the parameters for the Psychopy Window class
+  units: pix
+  color: [0, 0, 0] # psychopy rgb
+  fullscr: True
+  screen: 0 #1
+  winType: 'pyglet'
+  waitBlanking: True
+  colorSpace: 'rgb' #'hsv' #'rgb255'
+
+monitor:
+  name: default
+  width: 52.5 # width of monitor (in cm)
+  distance: 70 # distance of participant from monitor (in cm)
+  gamma: 1 # specific value for gamma correction
+
+monitor_extra:
+  height: 30 # height of monitor (in cm)
+
+mouse:
+  visible: False
+
+window_extra: # refers to the parameters for the OLD Psychopy Window class (new version breaks)
+  size: [1920, 1080] #[1680, 1050]
+  pos: [0, 0]
+  framerate: 60
+  mac_bool: False
+
+stimuli:
+  colorSpace: 'rgb' #'rgb255' #'hsv'
+
+  fix_dot_size_deg: 0.05
+  fix_lineSize_deg: 0.5
+  fix_linewidth_deg: 0.1
+  fix_color: [1, 1, 1] # psychopy rgb white
+
+  size_deg: 2.2 # size of gabor in deg 
+  sf: 6 # spatial frequency gabor
+  sd: .12 # standard deviation
+  
+  ori_deg: 7 # orientation in degrees
+  cond_colors: {'blue': [81,0,255], 'pink': [255, 0, 212]} # rgb255 
+
+
+keys: # keys to press, valid for laptop, scanner and behav lab
+  target_key: {'bL': ['z'],
+              'pL': ['x'],
+              'bR': ['n'],
+              'pR': ['m']}
+  right_index: ['right']
+
+
+visual_search:
+  set_size: [7, 16, 31] # set size (includes target)
+  num_ecc: [4, 8, 12] # eccentricity of target
+
+  num_blks: 4 # number of blocks
+  num_trl_cond: 60 # number of trials per condition (ecc, set size, target type)
+  max_display_time: 30 # in seconds
+  max_iti: 30 # in seconds
+
+  min_ecc: 2 # minimum eccentricity to plot stimuli (dva)
+  max_ecc: 16 # max eccentricity to plot stimuli (dva) - if none then occupy whole screen
+  ecc_grid_step: 2 # step size for ecc grid (dva)
+
+  target_names: {'bL': {'color': 'blue', 'orientation': 'left'},
+                 'pL': {'color': 'pink', 'orientation': 'left'},
+                 'bR': {'color': 'blue', 'orientation': 'right'},
+                 'pR': {'color': 'pink', 'orientation': 'right'}}
+
+
