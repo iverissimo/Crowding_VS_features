@@ -82,15 +82,18 @@ class VsearchStim(Stim):
                                                                         colorSpace = self.session.settings['stimuli']['colorSpace'])
 
         # make grating object for target
-        self.session.target_stim = visual.GratingStim(win = self.session.win,
-                                                        units = 'pix', 
-                                                        tex = 'sin',
-                                                        mask = 'gauss',
-                                                        ori = self.session.settings['stimuli']['ori_deg'],
-                                                        sf = self.session.settings['stimuli']['sf'],
-                                                        size = self.session.size_pix, 
-                                                        pos = (self.grid_pos[0][0], self.grid_pos[0][1])
-                                                        )
+        self.session.target_stim = visual.ElementArrayStim(win = self.session.win, 
+                                                            nElements = self.nElements,
+                                                            units = 'pix', 
+                                                            elementTex = 'sin', 
+                                                            elementMask = 'gauss',
+                                                            sizes = self.element_sizes, 
+                                                            sfs = self.element_sfs, 
+                                                            xys = self.element_positions, 
+                                                            oris = self.element_ori,
+                                                            contrs = self.element_contrast, 
+                                                            colors = self.element_color, 
+                                                            colorSpace = self.session.settings['stimuli']['colorSpace'])
         
         
     def draw(self, this_phase, trial_dict):
@@ -131,12 +134,15 @@ class VsearchStim(Stim):
                 
                 ### NEED TO DEFINE FUNC; DOESNT EXIST YET
                 # update target
-                self.session.target_stim =  utils.update_grating(GratingStim = self.session.target_stim,
-                                                                elem_color = trial_dict['target_color'], 
-                                                                elem_ori = trial_dict['target_ori'],
-                                                                elem_sf = self.session.settings['stimuli']['sf'],
-                                                                elem_pos = (trial_dict['target_pos'][0], trial_dict['target_pos'][1])
-                                                                )
+                self.session.target_stim = utils.update_elements(ElementArrayStim = self.session.target_stim,
+                                                                    elem_positions = np.array([list(trial_dict['target_pos'])]), 
+                                                                    grid_pos = self.grid_pos,
+                                                                    elem_color = trial_dict['target_color'],
+                                                                    elem_sf = self.session.settings['stimuli']['sf'],
+                                                                    elem_names = [trial_dict['target_name']],
+                                                                    elem_ori = [trial_dict['target_ori']],
+                                                                    key_name = [trial_dict['target_name']]) 
+                
                 
                 # actually draw
                 self.session.distractors_Bcolor_stim.draw()

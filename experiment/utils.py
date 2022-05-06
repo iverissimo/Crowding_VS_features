@@ -279,26 +279,34 @@ def update_elements(ElementArrayStim, elem_positions = [], grid_pos = [],
     # update element spatial frequency
     element_sfs = np.ones((nElements)) * elem_sf # in cycles/gabor width
 
+    # update element orientation
+    element_ori = np.ones((nElements))
+
     # get left and right indices from keys names
     L_indices = [ind for ind, k in enumerate(elem_names) if k in key_name and 'L' in k]
     R_indices = [ind for ind, k in enumerate(elem_names) if k in key_name and 'R' in k]
 
     # make grid and element position lists of lists
     list_grid_pos = [list(val) for _,val in enumerate(grid_pos)]
-    list_Lelem_pos = [list(val) for _,val in enumerate(elem_positions[L_indices])]
-    list_Relem_pos = [list(val) for _,val in enumerate(elem_positions[R_indices])]
 
-    # get left and right global indices (global, because indices given grid pos)
-    L_glob_indices = [list_grid_pos.index(list_Lelem_pos[i]) for i in range(len(list_Lelem_pos))]
-    R_glob_indices = [list_grid_pos.index(list_Relem_pos[i]) for i in range(len(list_Relem_pos))]
-        
-    # update element orientation
-    element_ori = np.ones((nElements))
-    if len(L_indices)>0:
+    if len(L_indices)>0: 
+        list_Lelem_pos = [list(val) for _,val in enumerate(elem_positions[L_indices])]
+        # get left and right global indices (global, because indices given grid pos)
+        L_glob_indices = [list_grid_pos.index(list_Lelem_pos[i]) for i in range(len(list_Lelem_pos))]
+
         element_ori[L_glob_indices] = np.array(elem_ori)[L_indices][0] 
-    if len(R_indices)>0:
-        element_ori[R_glob_indices] = np.array(elem_ori)[R_indices][0] 
+    else:
+        L_glob_indices = [] 
 
+    if len(R_indices)>0:
+        list_Relem_pos = [list(val) for _,val in enumerate(elem_positions[R_indices])]
+        # get left and right global indices (global, because indices given grid pos)
+        R_glob_indices = [list_grid_pos.index(list_Relem_pos[i]) for i in range(len(list_Relem_pos))]
+        
+        element_ori[R_glob_indices] = np.array(elem_ori)[R_indices][0] 
+    else:
+        R_glob_indices = []
+    
     # combine left and right global indices
     glob_indices = L_glob_indices + R_glob_indices 
 
