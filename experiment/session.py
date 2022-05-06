@@ -141,6 +141,10 @@ class VsearchSession(ExpSession):
 
         """ Creates trials (before running the session) """
 
+        # some counters for internal bookeeping
+        self.total_responses = 0
+        self.correct_responses = 0
+
         # target names
         self.target_names = np.array([k for k in self.settings['visual_search']['target_names'].keys()])
         # number of ecc for target

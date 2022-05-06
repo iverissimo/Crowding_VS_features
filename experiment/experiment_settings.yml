@@ -60,7 +60,7 @@ visual_search:
   num_ecc: [4, 8, 12] # eccentricity of target
 
   num_blks: 4 # number of blocks
-  num_trl_cond: 60 # number of trials per condition (ecc, set size, target type)
+  num_trl_cond: 10 #60 # number of trials per condition (ecc, set size, target type)
   max_display_time: 30 # in seconds
   max_iti: 30 # in seconds
 

@@ -85,13 +85,26 @@ class VsearchTrial(Trial):
                     self.session.close()
                     self.session.quit()
 
-                elif (ev in ['space']) and (self.phase_names[int(self.phase)] == 'block_start'): # TR pulse
+                elif (ev in ['space']) and (self.phase_names[int(self.phase)] == 'block_start'): # new block starts
                     event_type = 'block_start'
                     self.stop_phase()
 
-                else: # any other key pressed will be response to color change
-                    event_type = 'response'
+                elif (ev in list(np.ravel(list(self.session.settings['keys']['target_key'].values())))) and \
+                    (self.phase_names[int(self.phase)] == 'stim'): # stim presentation
 
+                    event_type = 'response'
+                    self.session.total_responses += 1
+
+                    if (ev in self.session.settings['keys']['target_key'][self.trial_dict['target_name']]):
+                        self.session.correct_responses += 1
+                        print('correct answer')
+                    else:
+                        print('wrong answer')
+                    
+                    self.stop_phase()
+
+                else:
+                    event_type = 'response'
                     if ev in ['u']: ### TEMPORARY
                         self.stop_phase() 
                     
