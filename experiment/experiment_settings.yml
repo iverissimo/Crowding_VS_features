@@ -8,7 +8,7 @@ window: # refers to the parameters for the Psychopy Window class
   units: pix
   color: [0, 0, 0] # psychopy rgb
   fullscr: True
-  screen: 0 #1
+  screen: 1 #0 #1
   winType: 'pyglet'
   waitBlanking: True
   colorSpace: 'rgb' #'hsv' #'rgb255'
@@ -29,7 +29,7 @@ window_extra: # refers to the parameters for the OLD Psychopy Window class (new 
   size: [1920, 1080] #[1680, 1050]
   pos: [0, 0]
   framerate: 60
-  mac_bool: False
+  mac_bool: True #False
 
 stimuli:
   colorSpace: 'rgb' #'rgb255' #'hsv'
@@ -60,9 +60,9 @@ visual_search:
   num_ecc: [4, 8, 12] # eccentricity of target
 
   num_blks: 4 # number of blocks
-  num_trl_cond: 10 #60 # number of trials per condition (ecc, set size, target type)
+  num_trl_cond: 5 #60 # number of trials per condition (ecc, set size, target type)
   max_display_time: 30 # in seconds
-  max_iti: 30 # in seconds
+  max_iti: 2 #30 # in seconds
 
   min_ecc: 2 # minimum eccentricity to plot stimuli (dva)
   max_ecc: 16 # max eccentricity to plot stimuli (dva) - if none then occupy whole screen

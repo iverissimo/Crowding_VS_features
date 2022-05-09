@@ -144,6 +144,11 @@ class VsearchSession(ExpSession):
         # some counters for internal bookeeping
         self.total_responses = 0
         self.correct_responses = 0
+        self.gaze_sampleCount = 0
+        # radius around fixation (in pix), to check for gaze during iti  
+        self.maxDist = 1/utils.dva_per_pix(height_cm = self.settings['monitor_extra']['height'], 
+                                                distance_cm = self.settings['monitor']['distance'], 
+                                                vert_res_pix = self.screen[-1])
 
         # target names
         self.target_names = np.array([k for k in self.settings['visual_search']['target_names'].keys()])
@@ -299,6 +304,11 @@ class VsearchSession(ExpSession):
         # cycle through trials
         for trl in self.all_trials: 
             trl.run() # run forrest run
+
+        print('Expected number of responses: %d'%(self.total_trials))
+        print('Total subject responses: %d'%self.total_responses)
+        print('Correct responses: %d'%self.correct_responses)
+        print('Overall accuracy %.2f %%'%(self.correct_responses/self.total_trials*100))
 
         self.close() # close session
 

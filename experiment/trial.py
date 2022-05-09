@@ -70,10 +70,29 @@ class VsearchTrial(Trial):
             self.session.vs_stim.draw(this_phase = self.phase_names[int(self.phase)],
                                     trial_dict = self.trial_dict)
 
+        else: # ITI period 
+            if self.session.eyetracker_on: # if we have eyetracker
+                print('to be tested!!!')
+
+                # get current gaze
+                curr_gaze = utils.getCurSamp(self.session.tracker, screen = self.session.screen)
+                # calculate distance to center of screen
+                dist2center = utils.distBetweenPoints(curr_gaze, (0, 0))
+
+                # Check if sample is within boundary
+                if dist2center < self.session.maxDist:
+                    self.session.gaze_sampleCount += 1
+
+                # If enough samples within boundary
+                if self.session.gaze_sampleCount >= 200:
+                    print('correctFixation')
+                    self.session.gaze_sampleCount = 0
+                    self.stop_phase()
+
         ## fixation cross
         self.session.fixation.draw() 
 
-        print(self.phase_names[int(self.phase)])
+        #print(self.phase_names[int(self.phase)])
 
 
     def get_events(self):
@@ -105,7 +124,7 @@ class VsearchTrial(Trial):
 
                 else:
                     event_type = 'response'
-                    if ev in ['u']: ### TEMPORARY
+                    if ev in ['space']: ### TEMPORARY
                         self.stop_phase() 
                     
 

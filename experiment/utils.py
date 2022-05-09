@@ -15,6 +15,8 @@ import time
 import colorsys
 import seaborn as sns
 
+import pylink
+
 def dva_per_pix(height_cm = 30, distance_cm = 70, vert_res_pix = 1080):
 
     """ calculate degrees of visual angle per pixel, 
@@ -374,3 +376,68 @@ def update_grating(GratingStim,
     GratingStim.mask = 'gauss'
 
     return(GratingStim)
+
+
+def getCurSamp(tracker, screen = [1920, 1080]):
+    """
+    Gets the most recent gaze position sample from the eyelink. This
+    sample might be a couple of ms delayed, depending on the eyelink
+    settings used.
+    The eyetracker needs to be in recording mode for this to work.
+
+   Parameters
+    ----------
+    tracker: Eyelink
+    	Pylink 'Eyelink' object (tracker = pylink.Eyelink)
+
+    Returns
+    -------
+    curSamp : tuple
+        The (x,y) gaze position on the screen. In center-based coordinates.
+    Examples
+    --------
+    >>> curSamp = tracker.getCurSamp()
+    >>> curSamp
+    (100,250)
+   
+    """
+    curSamp = tracker.getNewestSample()
+    
+    if curSamp is not None:
+        
+        if curSamp.isRightSample():
+            gazePos = curSamp.getRightEye().getGaze()
+        
+        if curSamp.isLeftSample():
+            gazePos = curSamp.getLeftEye().getGaze()
+
+        newGazePos = [0, 0]
+        newGazePos[0] = gazePos[0] - screen[0] / 2
+        newGazePos[1] = -(gazePos[1] - screen[1] / 2)
+        curSamp = newGazePos
+
+    return curSamp
+
+
+def distBetweenPoints(p1, p2):
+    """
+    Calculates the distance between two points in a grid
+    Parameters
+    ----------
+    p1 : tuple
+        A tuple containing the (x,y) coordinates of the first point
+    p2 : tuple
+        A tuple containing the (x,y) coordinates of the second point
+    Returns
+    -------
+    dist : float
+        The Euclidian distance between the two points, the function assumes
+        that the y-scaling and x-scaling are the same
+    Examples
+    --------
+    >>> dist = distBetweenPoints((0,0), (10,10))
+    >>> dist
+    14.142135623730951
+    """
+    dist = np.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
+    return dist
