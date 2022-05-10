@@ -1,3 +1,4 @@
+from multiprocessing.sharedctypes import Value
 import os
 import numpy as np
 import math
@@ -219,7 +220,7 @@ class CrowdingStim(Stim):
                                                             colorSpace = self.session.settings['stimuli']['colorSpace'])
         
         
-    def draw(self, this_phase, trial_dict):
+    def draw(self, this_phase, trial_dict, spacing_val = 0.8):
 
         """ Draw stimuli - flankers and target - for each trial 
 
@@ -242,18 +243,23 @@ class CrowdingStim(Stim):
                                                                 key_name = [trial_dict['target_name']]) 
 
             if trial_dict['crowding_type'] != 'unflankered':
-                ## update blue elements
+
+                # update y_position of flankers 
+                flank_ypos = self.session.ecc_pix * spacing_val 
+
+                ## update flankers
                 self.session.flanker_stim_0 = utils.update_elements(ElementArrayStim = self.session.flanker_stim_0,
-                                                                    elem_positions = trial_dict['distractor_pos'][0], 
+                                                                    elem_positions = [trial_dict['distractor_pos'][0][0], 
+                                                                                    flank_ypos], 
                                                                     elem_color = trial_dict['distractor_color'][0],
                                                                     elem_sf = self.session.settings['stimuli']['sf'],
                                                                     elem_names = [trial_dict['distractor_name'][0]],
                                                                     elem_ori = [trial_dict['distractor_ori'][0]],
                                                                     key_name = [trial_dict['distractor_name'][0]])
 
-                # update pink elements
                 self.session.flanker_stim_1 = utils.update_elements(ElementArrayStim = self.session.flanker_stim_1,
-                                                                    elem_positions = trial_dict['distractor_pos'][1], 
+                                                                    elem_positions = [trial_dict['distractor_pos'][1][0], 
+                                                                                    -flank_ypos],  
                                                                     elem_color = trial_dict['distractor_color'][1],
                                                                     elem_sf = self.session.settings['stimuli']['sf'],
                                                                     elem_names = [trial_dict['distractor_name'][1]],

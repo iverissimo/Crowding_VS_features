@@ -192,11 +192,29 @@ class CrowdingTrial(Trial):
             # draw text again
             block_text.draw()
 
-        elif self.phase_names[int(self.phase)] == 'stim': 
+        elif self.phase_names[int(self.phase)] == 'stim':
+
+            # define spacing ratio given staircase
+            if self.trial_dict['crowding_type'] == 'unflankered':
+                spacing_val = 0
+            else:
+                if self.session.settings['crowding']['staircase']['quest']:
+                    spacing_val = np.clip(self.session.staircases[self.trial_dict['crowding_type']].quantile(), 
+                                    self.session.distance_ratio_bounds[0], 
+                                    self.session.distance_ratio_bounds[1])
+                else:
+                    spacing_val = np.clip(self.session.staircases[self.trial_dict['crowding_type']]._nextIntensity,
+                                    self.session.distance_ratio_bounds[0], 
+                                    self.session.distance_ratio_bounds[1]) 
 
             # draw target and distractors
             self.session.cwrd_stim.draw(this_phase = self.phase_names[int(self.phase)],
-                                        trial_dict = self.trial_dict)
+                                        trial_dict = self.trial_dict,
+                                        spacing_val = spacing_val)
+
+        else: # iti
+            if self.session.trial_counter <= self.ID:
+                self.session.trial_counter += 1 # update trial counter if no response was given before
 
         ## fixation cross
         self.session.fixation.draw() 
@@ -210,31 +228,41 @@ class CrowdingTrial(Trial):
             if len(ev) > 0:
                 if ev in ['q']:
                     print('trial canceled by user')  
-                    self.session.close()
+                    self.session.close_all()
                     self.session.quit()
 
                 elif (ev in ['space']) and (self.phase_names[int(self.phase)] == 'block_start'): # new block starts
                     event_type = 'block_start'
                     self.stop_phase()
 
-                elif (ev in list(np.ravel(list(self.session.settings['keys']['target_key'].values())))) and \
-                    (self.phase_names[int(self.phase)] == 'stim'): # stim presentation
-
-                    event_type = 'response'
-                    self.session.total_responses += 1
-
-                    if (ev in self.session.settings['keys']['target_key'][self.trial_dict['target_name']]):
-                        self.session.correct_responses += 1
-                        print('correct answer')
-                    else:
-                        print('wrong answer')
-
-                    self.stop_phase()
-
                 else:
                     event_type = 'response'
-                    if ev in ['space']: ### TEMPORARY
-                        self.stop_phase() 
+                    self.session.total_responses += 1
+                    
+                    if (ev in list(np.ravel(list(self.session.settings['keys']['target_key'].values())))) and \
+                        (self.phase_names[int(self.phase)] == 'stim'): # stim presentation
+
+                        if self.session.trial_counter <= self.ID:
+
+                            # update color with answer
+                            if len(self.session.thisResp) > 0: # update with answer
+                                if self.trial_dict['crowding_type'] != 'unflankered':
+                                    # update staircase
+                                    self.session.staircases[self.trial_dict['crowding_type']].addResponse(self.session.thisResp[-1])
+                                    #print('The threshold is {s}'.format(s=self.session.staircases['ecc_ind_{e}'.format(e = self.session.ecc_ind_all[self.session.att_condition][self.session.bar_counter])].quantile()))
+                                # reset response again
+                                self.session.thisResp = []
+
+                            ## get user response!
+                            user_response = utils.get_response4staircase(event_key = ev, 
+                                                                    target_key = self.session.settings['keys']['target_key'][self.trial_dict['target_name']])
+
+                            self.session.thisResp.append(user_response)
+                            self.session.correct_responses += user_response
+
+                            self.session.trial_counter += 1 # update trial counter   
+
+                        self.stop_phase()
 
                 # log everything into session data frame
                 idx = self.session.global_log.shape[0]

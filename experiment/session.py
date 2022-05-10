@@ -8,6 +8,7 @@ from trial import VsearchTrial, CrowdingTrial #, FlickerTrial
 from stim import VsearchStim, CrowdingStim #, FlickerStim
 
 from psychopy import visual, tools
+from psychopy.data import QuestHandler, StairHandler
 
 import itertools
 import pickle
@@ -346,7 +347,10 @@ class CrowdingSession(ExpSession):
         self.n_flankers = self.settings['crowding']['num_flankers']
 
         # distance ratio bounds
-        self.distance_ratio_bounds = self.settings['crowding']['distance_ratio_bounds']
+        self.distance_ratio_bounds = self.settings['crowding']['staircase']['distance_ratio_bounds']
+
+        # set staircase filename
+        self.staircase_file_name = output_str + '_staircase'
 
 
     def create_stimuli(self):
@@ -364,9 +368,10 @@ class CrowdingSession(ExpSession):
         # some counters for internal bookeeping
         self.total_responses = 0
         self.correct_responses = 0
+        self.trial_counter = 0
+        self.thisResp = []
 
-
-         # number of trials per condition
+        # number of trials per condition
         num_cond_trials = {}
         total_trials = 0
         crowding_type = [] # to store crowding type
@@ -539,6 +544,73 @@ class CrowdingSession(ExpSession):
                                                 blk_counter = blk_counter
                                                 ))
 
+    
+    def create_staircase(self, stair_names = ['orientation', 'color', 'conjunction'],
+                            initial_val = .8, minVal = .2, maxVal = .8,
+                            pThreshold = 0.83, nUp = 1, nDown = 3, stepSize = 0.05, quest_stair = True):
+    
+        """ Creates staircases (before running the session) """
+        
+        self.num_staircases = len(stair_names)
+
+        if isinstance(initial_val, int) or isinstance(initial_val, float):
+            self.initial_val = np.tile(initial_val, self.num_staircases)
+
+        elif len(initial_val) < len(self.num_staircases):
+            raise ValueError('invalid input, check if initial value of staircases match number of staircases')
+        else:
+            self.initial_val = initial_val
+        
+        
+        self.staircases = {}
+        
+        for ind, key in enumerate(stair_names):
+
+            if quest_stair:
+                self.staircases[key] = QuestHandler(self.initial_val[ind],
+                                                    self.initial_val[ind]*.5,
+                                                    pThreshold = pThreshold,
+                                                    #nTrials = 20,
+                                                    stopInterval = None,
+                                                    beta = 3.5,
+                                                    delta = 0.05,
+                                                    gamma = 0,
+                                                    grain = 0.01,
+                                                    range = None,
+                                                    extraInfo = None,
+                                                    minVal = minVal, 
+                                                    maxVal = maxVal 
+                                                    )
+            else: 
+                # just make X down - X up staircase
+                self.staircases[key] = utils.StaircaseCostum(self.initial_val[ind],
+                                                                stepSize = stepSize,
+                                                                nUp = nUp, 
+                                                                nDown = nDown,
+                                                                minVal = minVal, 
+                                                                maxVal = maxVal 
+                                                                )
+
+    def close_all(self):
+        
+        """ to guarantee that when closing, everything is saved """
+
+        super(CrowdingSession, self).close()
+
+        for k in self.staircases.keys():
+            abs_filename = op.join(self.output_dir, self.staircase_file_name.replace('_staircase', '_staircase_{k}.pickle'.format(k = k)))
+            with open(abs_filename, 'wb') as f:
+                pickle.dump(self.staircases[k], f)
+
+            #self.staircases[e].saveAsPickle(abs_filename)
+            print('Staircase for {name}, has mean {stair_mean}, and standard deviation {stair_std}'.format(name = k, 
+                                                                                                        stair_mean = self.staircases[k].mean(), 
+                                                                                                        stair_std = self.staircases[k].sd()
+                                                                                                        ))
+        ## call func to plot staircase outputs
+        #print('Accuracy is %.2f %%'%(sum(self.staircases[e].data)/(sum(self.bar_bool)/3)*100))
+
+
 
     def run(self):
         """ Loops over trials and runs them """
@@ -546,6 +618,16 @@ class CrowdingSession(ExpSession):
         # create trials before running!
         self.create_stimuli()
         self.create_trials()
+
+        # create staircase
+        self.create_staircase(stair_names = list(self.settings['crowding']['crwd_type'].keys()),
+                            initial_val = self.distance_ratio_bounds[-1], 
+                            minVal = self.distance_ratio_bounds[0], 
+                            maxVal = self.distance_ratio_bounds[-1],
+                            nUp = self.settings['crowding']['staircase']['nUp'], 
+                            nDown = self.settings['crowding']['staircase']['nDown'], 
+                            stepSize = self.settings['crowding']['staircase']['stepSize'], 
+                            quest_stair = self.settings['crowding']['staircase']['quest']) 
 
         # if eyetracking then calibrate
         if self.eyetracker_on:
@@ -603,4 +685,4 @@ class CrowdingSession(ExpSession):
         print('Correct responses: %d'%self.correct_responses)
         print('Overall accuracy %.2f %%'%(self.correct_responses/self.total_trials*100))
 
-        self.close() # close session
+        self.close_all() # close session

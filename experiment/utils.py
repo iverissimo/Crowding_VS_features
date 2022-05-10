@@ -471,3 +471,129 @@ def get_flanker_name(target_name = 'bL', list_cond = ['bL', 'pL', 'bR', 'pR'], s
                       not val.startswith(target_name[0]) and not val.endswith(target_name[-1])][0]
 
     return flank_name
+
+def get_response4staircase(event_key = [], target_key = []):
+
+    """ helper function to get responses for crowding task """
+
+    if event_key in target_key:
+        response = 1
+        print('correct answer')
+    else:
+        response = 0
+        print('wrong answer')
+
+    return response 
+
+class StaircaseCostum():
+
+    """
+    Costum staircase class - X Up Y Down
+    """
+    
+    def __init__(self,
+                 startVal,
+                 stepSize = .1,  # stepsize
+                 nUp = 1,
+                 nDown = 3,  # correct responses before stim goes down
+                 minVal = 0,
+                 maxVal = 1):
+
+        """ Initializes object and set relevant variables """  
+        
+        # input variables
+        self.startVal = startVal
+        
+        self.nUp = nUp
+        self.nDown = nDown
+        
+        self.stepSize = stepSize
+        
+        self.minVal = minVal
+        self.maxVal = maxVal
+    
+
+        self.data = []
+        self.intensities = [startVal]
+        self.reversalIntensities = []
+        
+        # correct since last stim change (minus are incorrect):
+        self.correctCounter = 0
+        self.incorrectCounter = 0
+        self._nextIntensity = startVal
+        
+        self.increase = False
+        self.decrease = False
+        
+        
+    def addResponse(self, result):
+
+        """ add pp response to staircase """  
+        
+        # add response to data
+        self.data.append(result)
+        
+        # increment the counter of correct scores
+        if result == 1:
+            
+            self.correctCounter += 1
+            
+            if self.correctCounter >= self.nDown:
+                    
+                self.decrease = True
+                # reset counter
+                self.correctCounter = 0
+                    
+        elif result == 0:
+            
+            self.incorrectCounter += 1
+            
+            if self.incorrectCounter >= self.nUp:
+            
+                self.increase = True
+                # reset both counters
+                self.correctCounter = 0
+                self.incorrectCounter = 0
+                
+                    
+        # calculate next intensity
+        self.calculateNextIntensity()
+        
+        
+    def calculateNextIntensity(self):
+
+        """ calculate next value to use """  
+        
+        # add reversal info
+        if self.increase or self.decrease:
+            self.reversalIntensities.append(self.intensities[-1])
+            
+        if self.increase:
+            
+            self._nextIntensity += self.stepSize
+        
+            # check we haven't gone out of the legal range
+            if (self.maxVal is not None) and (self._nextIntensity > self.maxVal):
+                self._nextIntensity = self.maxVal
+                
+            self.increase = False
+            
+        elif self.decrease:
+            
+            self._nextIntensity -= self.stepSize
+        
+            # check we haven't gone out of the legal range
+            if (self.minVal is not None) and (self._nextIntensity < self.minVal):
+                self._nextIntensity = self.minVal
+                
+            self.decrease = False
+        
+        # append intensities
+        self.intensities.append(self._nextIntensity)
+              
+            
+    def mean(self):
+        return np.array(self.intensities).mean()
+    
+    def sd(self):
+        return np.array(self.intensities).std()

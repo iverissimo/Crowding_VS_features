@@ -94,9 +94,14 @@ crowding:
 
   max_pos_jitter: 0.5 # for flankers, horizontal jitter (in dva)
 
-  distance_ratio_bounds: [.2, .8] # max and min distance ratio (ratio x ecc)
-  staircase: '1U_3D' # quest
-  step_stair: .05
+  staircase: 
+    
+    quest: False
+
+    distance_ratio_bounds: [.2, .8] # max and min distance ratio (ratio x ecc)
+    nUp: 1
+    nDown: 3
+    stepSize: .05
 
   target_names: {'bL': {'color': 'blue', 'orientation': 'left'},
                  'pL': {'color': 'pink', 'orientation': 'left'},
