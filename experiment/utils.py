@@ -138,7 +138,7 @@ def get_grid_array(positions, ecc_range, convert2pix = True, screen = [1920, 108
 
 def draw_instructions(win, instructions, keys = ['b'], visual_obj = [], 
                       color = (1, 1, 1), font = 'Helvetica Neue', pos = (0, 0), height = 40, #.65,
-                        italic = True, alignHoriz = 'center', alignVert = 'center'):
+                        italic = True, anchorHoriz = 'center', anchorVert = 'center'):
     
     """ draw instructions on screen
     
@@ -162,8 +162,8 @@ def draw_instructions(win, instructions, keys = ['b'], visual_obj = [],
                         pos = pos, 
                         height = height,
                         italic = italic, 
-                        alignHoriz = alignHoriz, 
-                        alignVert = alignVert
+                        anchorHoriz = anchorHoriz, 
+                        anchorVert = anchorVert
                         )
     
     # draw text again
@@ -254,7 +254,10 @@ def update_elements(ElementArrayStim, elem_positions = [], grid_pos = [],
     """
     
     # set number of elements
-    nElements = grid_pos.shape[0]
+    if len(grid_pos) == 0:
+        nElements = 1
+    else:
+        nElements = grid_pos.shape[0]
 
     ## to make colored gabor, need to do it a bit differently (psychopy forces colors to be opposite)
     # get rgb color and convert to hsv
@@ -284,40 +287,46 @@ def update_elements(ElementArrayStim, elem_positions = [], grid_pos = [],
     # update element orientation
     element_ori = np.ones((nElements))
 
-    # get left and right indices from keys names
-    L_indices = [ind for ind, k in enumerate(elem_names) if k in key_name and 'L' in k]
-    R_indices = [ind for ind, k in enumerate(elem_names) if k in key_name and 'R' in k]
+    if nElements > 1:
+        # get left and right indices from keys names
+        L_indices = [ind for ind, k in enumerate(elem_names) if k in key_name and 'L' in k]
+        R_indices = [ind for ind, k in enumerate(elem_names) if k in key_name and 'R' in k]
 
-    # make grid and element position lists of lists
-    list_grid_pos = [list(val) for _,val in enumerate(grid_pos)]
+        # make grid and element position lists of lists
+        list_grid_pos = [list(val) for _,val in enumerate(grid_pos)]
 
-    if len(L_indices)>0: 
-        list_Lelem_pos = [list(val) for _,val in enumerate(elem_positions[L_indices])]
-        # get left and right global indices (global, because indices given grid pos)
-        L_glob_indices = [list_grid_pos.index(list_Lelem_pos[i]) for i in range(len(list_Lelem_pos))]
+        if len(L_indices)>0: 
+            list_Lelem_pos = [list(val) for _,val in enumerate(elem_positions[L_indices])]
+            # get left and right global indices (global, because indices given grid pos)
+            L_glob_indices = [list_grid_pos.index(list_Lelem_pos[i]) for i in range(len(list_Lelem_pos))]
 
-        element_ori[L_glob_indices] = np.array(elem_ori)[L_indices][0] 
+            element_ori[L_glob_indices] = np.array(elem_ori)[L_indices][0] 
+        else:
+            L_glob_indices = [] 
+
+        if len(R_indices)>0:
+            list_Relem_pos = [list(val) for _,val in enumerate(elem_positions[R_indices])]
+            # get left and right global indices (global, because indices given grid pos)
+            R_glob_indices = [list_grid_pos.index(list_Relem_pos[i]) for i in range(len(list_Relem_pos))]
+            
+            element_ori[R_glob_indices] = np.array(elem_ori)[R_indices][0] 
+        else:
+            R_glob_indices = []
+
+        # combine left and right global indices
+        glob_indices = L_glob_indices + R_glob_indices 
+
     else:
-        L_glob_indices = [] 
-
-    if len(R_indices)>0:
-        list_Relem_pos = [list(val) for _,val in enumerate(elem_positions[R_indices])]
-        # get left and right global indices (global, because indices given grid pos)
-        R_glob_indices = [list_grid_pos.index(list_Relem_pos[i]) for i in range(len(list_Relem_pos))]
-        
-        element_ori[R_glob_indices] = np.array(elem_ori)[R_indices][0] 
-    else:
-        R_glob_indices = []
-    
-    # combine left and right global indices
-    glob_indices = L_glob_indices + R_glob_indices 
+        glob_indices = 0
+        element_ori[glob_indices] = elem_ori[glob_indices]
+        element_positions = np.array([elem_positions])
 
     # set element contrasts
-    element_contrast = np.zeros(len(grid_pos))
+    element_contrast = np.zeros(nElements)
     element_contrast[glob_indices] = 1
     
     # set element opacities
-    element_opacities = np.zeros(len(grid_pos))
+    element_opacities = np.zeros(nElements)
     element_opacities[glob_indices] = 1
 
     # set all of the above settings
@@ -327,6 +336,8 @@ def update_elements(ElementArrayStim, elem_positions = [], grid_pos = [],
     ElementArrayStim.setOris(element_ori)
     ElementArrayStim.setColors(element_color, 'rgb')
     ElementArrayStim.setContrs(element_contrast)
+    if nElements == 1:
+        ElementArrayStim.setXYs(element_positions)
 
     return(ElementArrayStim)
 
@@ -441,3 +452,22 @@ def distBetweenPoints(p1, p2):
     """
     dist = np.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
     return dist
+
+
+def get_flanker_name(target_name = 'bL', list_cond = ['bL', 'pL', 'bR', 'pR'], same_ori = True, same_color = True):
+
+    """
+    Get flanker name given target name
+    """
+    
+    if same_ori and same_color:
+        flank_name = target_name
+    elif same_ori and not same_color:
+        flank_name = [val for val in list_cond if val != target_name and val.endswith(target_name[-1])][0]
+    elif not same_ori and same_color:
+        flank_name = [val for val in list_cond if val != target_name and val.startswith(target_name[0])][0]
+    else:
+        flank_name = [val for val in list_cond if val != target_name and \
+                      not val.startswith(target_name[0]) and not val.endswith(target_name[-1])][0]
+
+    return flank_name

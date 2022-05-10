@@ -3,7 +3,7 @@ import sys
 import os
 import os.path as op
 #import appnope
-from session import VsearchSession #, CrowdingSession, FlickerSession, PylinkEyetrackerSession
+from session import VsearchSession, CrowdingSession #, FlickerSession, PylinkEyetrackerSession
 
 
 # define main function
@@ -67,11 +67,11 @@ def main():
                               settings_file = 'experiment_settings.yml',
                               eyetracker_on = False) #True)
 
-    # elif exp_type == 'crowding': # run feature pRF mapper
-    #      exp_sess = CrowdingSession(output_str = output_str,
-    #                               output_dir = output_dir,
-    #                               settings_file = 'experiment_settings.yml',
-    #                               eyetracker_on = True)
+    elif exp_type == 'crowding': # run feature pRF mapper
+         exp_sess = CrowdingSession(output_str = output_str,
+                                  output_dir = output_dir,
+                                  settings_file = 'experiment_settings.yml',
+                                  eyetracker_on = False) #True)
 
     # elif exp_type == 'flicker': # run feature pRF mapper
     #      exp_sess = FlickerSession(output_str = output_str,

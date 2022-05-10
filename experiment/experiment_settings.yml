@@ -8,7 +8,7 @@ window: # refers to the parameters for the Psychopy Window class
   units: pix
   color: [0, 0, 0] # psychopy rgb
   fullscr: True
-  screen: 1 #0 #1
+  screen: 0 #1
   winType: 'pyglet'
   waitBlanking: True
   colorSpace: 'rgb' #'hsv' #'rgb255'
@@ -29,7 +29,7 @@ window_extra: # refers to the parameters for the OLD Psychopy Window class (new 
   size: [1920, 1080] #[1680, 1050]
   pos: [0, 0]
   framerate: 60
-  mac_bool: True #False
+  mac_bool: False #True #False
 
 stimuli:
   colorSpace: 'rgb' #'rgb255' #'hsv'
@@ -43,7 +43,7 @@ stimuli:
   sf: 6 # spatial frequency gabor
   sd: .12 # standard deviation
   
-  ori_deg: 7 # orientation in degrees
+  ori_deg: 5 # orientation in degrees
   cond_colors: {'blue': [81,0,255], 'pink': [255, 0, 212]} # rgb255 
 
 
@@ -72,5 +72,42 @@ visual_search:
                  'pL': {'color': 'pink', 'orientation': 'left'},
                  'bR': {'color': 'blue', 'orientation': 'right'},
                  'pR': {'color': 'pink', 'orientation': 'right'}}
+
+crowding:
+  crwd_type:
+    orientation:
+      trial_type: ['cong_ori', 'incong_ori'] # congruent vs incongruent
+    color:
+      trial_type: ['cong_col', 'incong_col']
+    conjunction:
+      trial_type: ['cong_col_ori', 'incong_col_ori', 'cong_col_incong_ori', 'incong_col_cong_ori'] 
+
+  num_blks: 4 # number of blocks
+  num_trl_cond: 30 # number of trials per condition (visual hemifield, congruency)
+
+  max_trial_time: 2 # in seconds
+  stim_display_time: 2 #.05 # in seconds
+  iti: .5 # in seconds
+
+  ecc: 8 # in dva
+  num_flankers: 2
+
+  max_pos_jitter: 0.5 # for flankers, horizontal jitter (in dva)
+
+  distance_ratio_bounds: [.2, .8] # max and min distance ratio (ratio x ecc)
+  staircase: '1U_3D' # quest
+  step_stair: .05
+
+  target_names: {'bL': {'color': 'blue', 'orientation': 'left'},
+                 'pL': {'color': 'pink', 'orientation': 'left'},
+                 'bR': {'color': 'blue', 'orientation': 'right'},
+                 'pR': {'color': 'pink', 'orientation': 'right'}}
+
+
+  
+  
+  
+
+
 
 
