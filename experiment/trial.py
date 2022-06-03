@@ -183,7 +183,7 @@ class CrowdingTrial(Trial):
 
             # show instructions
             this_instruction_string = ('BLOCK %i\n\n\n\n\n\n'
-                                '[Ready? Press space bar to start]\n\n'%(self.blk_counter))
+                                '[Ready? Press space bar to start]\n\n'%(self.blk_counter+1))
 
             block_text = visual.TextStim(win = self.session.win, text = this_instruction_string,
                         color = (1, 1, 1), font = 'Helvetica Neue', pos = (0, 0), height = 40,

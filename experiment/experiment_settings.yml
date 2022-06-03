@@ -15,8 +15,8 @@ window: # refers to the parameters for the Psychopy Window class
 
 monitor:
   name: default
-  width: 52.5 # width of monitor (in cm)
-  distance: 70 # distance of participant from monitor (in cm)
+  width: 52.6 # width of monitor (in cm)
+  distance: 73 # distance of participant from monitor (in cm)
   gamma: 1 # specific value for gamma correction
 
 monitor_extra:
@@ -48,10 +48,8 @@ stimuli:
 
 
 keys: # keys to press, valid for laptop, scanner and behav lab
-  target_key: {'bL': ['z'],
-              'pL': ['x'],
-              'bR': ['n'],
-              'pR': ['m']}
+  target_key: {'bL': ['z'], 'bR': ['x'],
+              'pL': ['n'], 'pR': ['m']}
   right_index: ['right']
 
 
@@ -74,23 +72,18 @@ visual_search:
                  'pR': {'color': 'pink', 'orientation': 'right'}}
 
 crowding:
-  crwd_type:
-    orientation:
-      trial_type: ['cong_ori', 'incong_ori'] # congruent vs incongruent
-    color:
-      trial_type: ['cong_col', 'incong_col']
-    conjunction:
-      trial_type: ['cong_col_ori', 'incong_col_ori', 'cong_col_incong_ori', 'incong_col_cong_ori'] 
+  crwd_type: ['orientation', 'color', 'conjunction']
 
   num_blks: 4 # number of blocks
-  num_trl_cond: 30 # number of trials per condition (visual hemifield, congruency)
+  num_trl_cond: 20 # number of trials per visual hemifield, for a specific type of target and crowding type
 
-  max_trial_time: 2 # in seconds
-  stim_display_time: 2 #.05 # in seconds
+  max_trial_time: 10 #2 # in seconds
+  stim_display_time: .05 # in seconds
   iti: .5 # in seconds
 
   ecc: 8 # in dva
-  num_flankers: 2
+  num_flankers: 4 #2
+  offset_ang: 45
 
   max_pos_jitter: 0.5 # for flankers, horizontal jitter (in dva)
 

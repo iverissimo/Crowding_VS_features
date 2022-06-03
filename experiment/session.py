@@ -341,7 +341,7 @@ class CrowdingSession(ExpSession):
                                             distance_cm = self.settings['monitor']['distance'], 
                                             vert_res_pix = self.screen[-1])
         # ratio of unflanked trials
-        self.unflank_ratio = 1/6
+        self.unflank_ratio = 1/5
 
         # number of flankers and position
         self.n_flankers = self.settings['crowding']['num_flankers']
@@ -375,40 +375,47 @@ class CrowdingSession(ExpSession):
         num_cond_trials = {}
         total_trials = 0
         crowding_type = [] # to store crowding type
-        trial_type = [] # to store trial type
         hemifield = [] # to store hemifield
-        target_name = [] # target type
+        target_name = [] # target name
+                    
+        for k in self.settings['crowding']['crwd_type']:
             
-        for k in self.settings['crowding']['crwd_type'].keys():
-            
-            num_cond_trials[k] = len(self.settings['crowding']['crwd_type'][k]['trial_type'])* self.settings['crowding']['num_trl_cond'] * 2 # x 2 hemifields
+            # number of trials for this crowding type
+            num_cond_trials[k] = len(self.settings['crowding']['target_names'].keys()) * \
+                                self.settings['crowding']['num_trl_cond'] * 2 # num target x min_num trials x 2 hemifields
+            # update total number of trials
             total_trials += num_cond_trials[k]
 
+            # set list with crowdign type name, for bookeeping
             crowding_type += list(np.tile(k, num_cond_trials[k]))
-            trial_type += list(np.repeat(self.settings['crowding']['crwd_type'][k]['trial_type'], 
-                                    int(num_cond_trials[k]/len(self.settings['crowding']['crwd_type'][k]['trial_type']))))
-            target_name += list(np.tile(list(self.ori_dict.keys()), int(num_cond_trials[k]/len(self.ori_dict.keys()))))
             
-            hemifield += list(np.tile(np.repeat(['left', 'right'],int(len(self.ori_dict.keys()))), 
-                                    int(num_cond_trials[k]/int(len(self.ori_dict.keys())*2))))
+            # target name
+            target_name += list(np.repeat(list(self.settings['crowding']['target_names'].keys()),
+                                    self.settings['crowding']['num_trl_cond'] * 2))
+            
+            # which hemifield we're displaying the stimuli
+            hemifield += list(np.tile(['left', 'right'],
+                                len(self.settings['crowding']['target_names'].keys()) * \
+                                    self.settings['crowding']['num_trl_cond']))
             
         # need to add unflankered trials
+        ## need to add same for unflankered trials
         num_cond_trials['unflankered'] = int(total_trials * self.unflank_ratio)
         self.total_trials = total_trials + num_cond_trials['unflankered']
 
         crowding_type += list(np.tile('unflankered', num_cond_trials['unflankered']))
-        trial_type += list(np.repeat('None', num_cond_trials['unflankered']))
 
-        target_name += list(np.tile(list(self.ori_dict.keys()), int(num_cond_trials['unflankered']/len(self.ori_dict.keys()))))
-                            
-        hemifield += list(np.tile(np.repeat(['left', 'right'],int(len(self.ori_dict.keys()))), 
-                                    int(num_cond_trials['unflankered']/int(len(self.ori_dict.keys())*2))))
-        
+        target_name += list(np.repeat(list(self.settings['crowding']['target_names'].keys()),
+                                    int(num_cond_trials['unflankered']/len(self.settings['crowding']['target_names'].keys()))))
+
+        hemifield += list(np.tile(['left', 'right'],
+                                int(num_cond_trials['unflankered']/2)))
+
         print('Total number of trials: %i'%self.total_trials)
 
         # now make df with trial info, 
         # also including target and distractor positions on screen
-        trials_df = pd.DataFrame(columns = ['index', 'crowding_type', 'trial_type', 'hemifield',
+        trials_df = pd.DataFrame(columns = ['index', 'crowding_type', 'hemifield',
                                             'target_name','target_pos', 
                                             'target_color', 'target_ori', 
                                             'distractor_name', 'distractor_pos',
@@ -422,73 +429,48 @@ class CrowdingSession(ExpSession):
 
             # stimuli x position
             x_pos_stim = -self.ecc_pix  if hemifield[i] == 'left' else self.ecc_pix
-            
-            # set initial distractor position --> SHOULD MAKE THIS FLEXIBLE DEPENDING ON NUMBER OF FLANKERS
-            dist_pos = [[x_pos_stim, self.distance_ratio_bounds[-1] * self.ecc_pix],
-                        [x_pos_stim, self.distance_ratio_bounds[-1] * self.ecc_pix * -1]]
+
+            # set initial distractor position
+            dist_pos = utils.get_flanker_pos(num_fl = self.n_flankers, 
+                                            offset_ang = self.settings['crowding']['offset_ang'], 
+                                            distance_r = self.distance_ratio_bounds[-1], hemi = hemifield[i],
+                                            ecc = self.ecc_pix)
 
             # get distractor (flanker) names
-            dist_name = []
-            dist_col = []
-            dist_ori = []
-            
-            for n in range(self.n_flankers):
-                
-                if crowding_type[i] == 'orientation':
-                    
-                    if trial_type[i].startswith('cong'): # congruent trial
-                        dist_name.append(target_name[i]) # distractors and target will be the same
-                    else:
-                        dist_name.append(utils.get_flanker_name(target_name[i],
-                                                        list_cond = list(self.ori_dict.keys()), 
-                                                        same_ori = False, same_color = True))
-                elif crowding_type[i] == 'color':
-                    
-                    if trial_type[i].startswith('cong'): # congruent trial
-                        dist_name.append(target_name[i]) # distractors and target will be the same
-                    else:
-                        dist_name.append(utils.get_flanker_name(target_name[i],
-                                                        list_cond = list(self.ori_dict.keys()), 
-                                                        same_ori = True, same_color = False))
-                elif crowding_type[i] == 'conjunction':
-                    
-                    if trial_type[i].startswith('cong'): # congruent color trial
-                        
-                        if trial_type[i] == 'cong_col_ori': # congruent color and orientation
-                            dist_name.append(target_name[i]) # distractors and target will be the same
-                        
-                        elif trial_type[i] == 'cong_col_incong_ori': # will be congruent color, and incongruent orientation
-                            dist_name.append(utils.get_flanker_name(target_name[i],
-                                                        list_cond = list(self.ori_dict.keys()), 
-                                                        same_ori = False, same_color = True))
-                    else:
-                        
-                        if trial_type[i] == 'incong_col_ori': # incongruent color and orientation
-                            dist_name.append(utils.get_flanker_name(target_name[i],
-                                                        list_cond = list(self.ori_dict.keys()), 
-                                                        same_ori = False, same_color = False))
-                        
-                        elif trial_type[i] == 'incong_col_cong_ori': # incongruent color and congruent orientation
-                            dist_name.append(utils.get_flanker_name(target_name[i],
-                                                        list_cond = list(self.ori_dict.keys()), 
-                                                        same_ori = True, same_color = False))
+            if crowding_type[i] == 'orientation':
 
-                else: ## unflankered
-                    dist_name.append('None')
-                    
-                
-                ## append distractor color and orientation
-                if crowding_type[i] == 'unflankered':
-                    dist_col.append('None')
-                    dist_ori.append('None')
-                else:
-                    dist_col.append(self.colors_dict[dist_name[n]])
-                    dist_ori.append(self.ori_dict[dist_name[n]])
-                        
+                dist_name = utils.get_flanker_name(target_name[i],
+                                                        num_fl = self.n_flankers,
+                                                        list_cond = list(self.ori_dict.keys()), 
+                                                        same_ori = False, same_color = True)
+            elif crowding_type[i] == 'color':
+
+                dist_name = utils.get_flanker_name(target_name[i],
+                                                        num_fl = self.n_flankers,
+                                                        list_cond = list(self.ori_dict.keys()), 
+                                                        same_ori = True, same_color = False)
+            elif crowding_type[i] == 'conjunction':
+
+                dist_name = utils.get_flanker_name(target_name[i],
+                                                        num_fl = self.n_flankers,
+                                                        list_cond = list(self.ori_dict.keys()), 
+                                                        same_ori = False, same_color = False)
+
+            else: ## unflankered
+                dist_name = list(np.repeat(['None'],self.n_flankers))
+
+
+            ## append distractor color and orientation
+            if crowding_type[i] == 'unflankered':
+                dist_col = list(np.repeat(['None'],self.n_flankers))
+                dist_ori = list(np.repeat(['None'],self.n_flankers))
+            else:
+                dist_col = [self.colors_dict[x] for x in dist_name]
+                dist_ori = [self.ori_dict[x] for x in dist_name]
+
             # append trial!
             trials_df = trials_df.append(pd.DataFrame({'index': [trial_num],
                                                     'crowding_type': [crowding_type[i]],
-                                                    'trial_type': [trial_type[i]],
                                                     'hemifield': [hemifield[i]],
                                                     'target_name': [target_name[i]],
                                                     'target_pos': [[x_pos_stim, 0]],
@@ -499,6 +481,7 @@ class CrowdingSession(ExpSession):
                                                     'distractor_color': [dist_col],
                                                     'distractor_ori': [dist_ori]
                                                 }))
+
 
 
         ## save dataframe with all trial info
@@ -620,7 +603,7 @@ class CrowdingSession(ExpSession):
         self.create_trials()
 
         # create staircase
-        self.create_staircase(stair_names = list(self.settings['crowding']['crwd_type'].keys()),
+        self.create_staircase(stair_names = self.settings['crowding']['crwd_type'],
                             initial_val = self.distance_ratio_bounds[-1], 
                             minVal = self.distance_ratio_bounds[0], 
                             maxVal = self.distance_ratio_bounds[-1],

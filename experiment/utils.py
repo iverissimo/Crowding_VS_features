@@ -454,22 +454,34 @@ def distBetweenPoints(p1, p2):
     return dist
 
 
-def get_flanker_name(target_name = 'bL', list_cond = ['bL', 'pL', 'bR', 'pR'], same_ori = True, same_color = True):
+def get_flanker_name(target_name = 'bL', list_cond = ['bL', 'pL', 'bR', 'pR'], 
+                     num_fl = 4,
+                     same_ori = True, same_color = True):
 
     """
     Get flanker name given target name
     """
     
-    if same_ori and same_color:
-        flank_name = target_name
-    elif same_ori and not same_color:
-        flank_name = [val for val in list_cond if val != target_name and val.endswith(target_name[-1])][0]
-    elif not same_ori and same_color:
-        flank_name = [val for val in list_cond if val != target_name and val.startswith(target_name[0])][0]
-    else:
-        flank_name = [val for val in list_cond if val != target_name and \
-                      not val.startswith(target_name[0]) and not val.endswith(target_name[-1])][0]
+    if same_ori and same_color: # everything the same (should not be the case)
+        flank_name = list(np.repeat(target_name,num_fl))
+        
+    elif same_ori and not same_color: # same orientation
+        flank_name = [val for val in list_cond if val.endswith(target_name[-1])]
+        flank_name = list(np.repeat(flank_name, num_fl/len(flank_name)))
+    
+    elif not same_ori and same_color:# same color
+        flank_name = [val for val in list_cond if val.startswith(target_name[0])]
+        flank_name = list(np.repeat(flank_name, num_fl/len(flank_name)))
+    
+    else: # all different
+        flank_name = list_cond
 
+    np.random.shuffle(flank_name) # randomize
+    
+    if num_fl < len(list_cond): # if less flankers, subselect --> should change this, and add condition where more flankers available
+        flank_name = flank_name[:num_fl]
+
+    
     return flank_name
 
 def get_response4staircase(event_key = [], target_key = []):
@@ -597,3 +609,44 @@ class StaircaseCostum():
     
     def sd(self):
         return np.array(self.intensities).std()
+
+
+def get_flanker_pos(num_fl = 4, offset_ang = 45, distance_r = .8, hemi = 'right',
+                   ecc = 8):
+    
+    """ define distractor positions
+
+    Parameters
+    ----------
+    num_fl : int
+        number of flankers
+    offset_ang: float
+        angle in degrees to offset from 0
+    distance_r: float
+        ratio of ecc (to calculate radial distance between target and flank)
+    hemi: str
+        visual hemifield we're plotting in
+    ecc: int/float
+        eccentricity in dva
+    
+    Outputs
+    -------
+    fl_pos : list
+        list of [x,y] positions per distractor
+    
+    """
+    
+    hypotenuse = distance_r * ecc
+    fl_angles = [offset_ang + (360/num_fl)* i for i in np.arange(num_fl)]
+
+    fl_pos = []
+
+    for num in range(num_fl):
+
+        fl_pos.append(list([hypotenuse*np.cos(np.deg2rad(fl_angles[num])), 
+                  hypotenuse*np.sin(np.deg2rad(fl_angles[num]))]))
+
+        # update x position given hemifield of stim
+        fl_pos[num][0] += ecc if hemi == 'right' else -ecc
+
+    return fl_pos

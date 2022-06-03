@@ -193,6 +193,7 @@ class CrowdingStim(Stim):
                                                             colorSpace = self.session.settings['stimuli']['colorSpace'])
         
         # make grating object for flankers
+        ## SHOULD MAKE ONLY 2 OBJECTS -- for now this is quick fix
         self.session.flanker_stim_0 = visual.ElementArrayStim(win = self.session.win, 
                                                             nElements = self.nElements,
                                                             units = 'pix', 
@@ -218,6 +219,33 @@ class CrowdingStim(Stim):
                                                             contrs = self.element_contrast, 
                                                             colors = self.element_color, 
                                                             colorSpace = self.session.settings['stimuli']['colorSpace'])
+
+        self.session.flanker_stim_2 = visual.ElementArrayStim(win = self.session.win, 
+                                                            nElements = self.nElements,
+                                                            units = 'pix', 
+                                                            elementTex = 'sin', 
+                                                            elementMask = 'gauss',
+                                                            sizes = self.element_sizes, 
+                                                            sfs = self.element_sfs, 
+                                                            xys = self.element_positions, 
+                                                            oris = self.element_ori,
+                                                            contrs = self.element_contrast, 
+                                                            colors = self.element_color, 
+                                                            colorSpace = self.session.settings['stimuli']['colorSpace'])
+        
+        self.session.flanker_stim_3 = visual.ElementArrayStim(win = self.session.win, 
+                                                            nElements = self.nElements,
+                                                            units = 'pix', 
+                                                            elementTex = 'sin', 
+                                                            elementMask = 'gauss',
+                                                            sizes = self.element_sizes, 
+                                                            sfs = self.element_sfs, 
+                                                            xys = self.element_positions, 
+                                                            oris = self.element_ori,
+                                                            contrs = self.element_contrast, 
+                                                            colors = self.element_color, 
+                                                            colorSpace = self.session.settings['stimuli']['colorSpace'])
+        
         
         
     def draw(self, this_phase, trial_dict, spacing_val = 0.8):
@@ -245,12 +273,15 @@ class CrowdingStim(Stim):
             if trial_dict['crowding_type'] != 'unflankered':
 
                 # update y_position of flankers 
-                flank_ypos = self.session.ecc_pix * spacing_val 
+                new_positions = utils.get_flanker_pos(num_fl = self.session.n_flankers, 
+                                                    offset_ang = self.session.settings['crowding']['offset_ang'], 
+                                                    distance_r = spacing_val, 
+                                                    hemi = trial_dict['hemifield'],
+                                                    ecc = self.session.ecc_pix)
 
                 ## update flankers
                 self.session.flanker_stim_0 = utils.update_elements(ElementArrayStim = self.session.flanker_stim_0,
-                                                                    elem_positions = [trial_dict['distractor_pos'][0][0], 
-                                                                                    flank_ypos], 
+                                                                    elem_positions = new_positions[0], 
                                                                     elem_color = trial_dict['distractor_color'][0],
                                                                     elem_sf = self.session.settings['stimuli']['sf'],
                                                                     elem_names = [trial_dict['distractor_name'][0]],
@@ -258,14 +289,28 @@ class CrowdingStim(Stim):
                                                                     key_name = [trial_dict['distractor_name'][0]])
 
                 self.session.flanker_stim_1 = utils.update_elements(ElementArrayStim = self.session.flanker_stim_1,
-                                                                    elem_positions = [trial_dict['distractor_pos'][1][0], 
-                                                                                    -flank_ypos],  
+                                                                    elem_positions = new_positions[1],  
                                                                     elem_color = trial_dict['distractor_color'][1],
                                                                     elem_sf = self.session.settings['stimuli']['sf'],
                                                                     elem_names = [trial_dict['distractor_name'][1]],
                                                                     elem_ori = [trial_dict['distractor_ori'][1]],
                                                                     key_name = [trial_dict['distractor_name'][1]])
 
+                self.session.flanker_stim_2 = utils.update_elements(ElementArrayStim = self.session.flanker_stim_2,
+                                                                    elem_positions = new_positions[2],  
+                                                                    elem_color = trial_dict['distractor_color'][1],
+                                                                    elem_sf = self.session.settings['stimuli']['sf'],
+                                                                    elem_names = [trial_dict['distractor_name'][1]],
+                                                                    elem_ori = [trial_dict['distractor_ori'][1]],
+                                                                    key_name = [trial_dict['distractor_name'][1]])
+
+                self.session.flanker_stim_3 = utils.update_elements(ElementArrayStim = self.session.flanker_stim_3,
+                                                                    elem_positions = new_positions[3],  
+                                                                    elem_color = trial_dict['distractor_color'][1],
+                                                                    elem_sf = self.session.settings['stimuli']['sf'],
+                                                                    elem_names = [trial_dict['distractor_name'][1]],
+                                                                    elem_ori = [trial_dict['distractor_ori'][1]],
+                                                                    key_name = [trial_dict['distractor_name'][1]])
 
             # actually draw
             self.session.target_stim.draw()
@@ -273,3 +318,5 @@ class CrowdingStim(Stim):
             if trial_dict['crowding_type'] != 'unflankered':
                 self.session.flanker_stim_0.draw()
                 self.session.flanker_stim_1.draw()
+                self.session.flanker_stim_2.draw()
+                self.session.flanker_stim_3.draw()
