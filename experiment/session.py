@@ -493,9 +493,6 @@ class CrowdingSession(ExpSession):
                                 self.settings['crowding']['num_blks']+1, dtype=int)[:-1]
         blk_counter = 0
 
-        # max trial time, in seconds
-        max_trial_time = self.settings['crowding']['max_trial_time'] + self.settings['crowding']['iti']
-
         # append all trials
         self.all_trials = []
         for i in np.arange(self.total_trials):
@@ -504,9 +501,10 @@ class CrowdingSession(ExpSession):
 
             if blk_trials[blk_counter] == i:
                 # insert block phase, to pause trials for a bit
-                phase_cond = tuple(['block_start', 'stim','iti'])
-                phase_dur = tuple([1000, # make this extremely long 
-                                self.settings['crowding']['max_trial_time'],
+                phase_cond = tuple(['block_start', 'stim', 'response_time','iti'])
+                phase_dur = tuple([1000, # make this extremely long
+                                self.settings['crowding']['stim_display_time'], 
+                                self.settings['crowding']['max_resp_time'], # max time to respond, in seconds
                                 self.settings['crowding']['iti']
                                 ])
 
@@ -514,8 +512,9 @@ class CrowdingSession(ExpSession):
                     blk_counter += 1
 
             else:
-                phase_cond = tuple(['stim','iti'])
-                phase_dur = tuple([self.settings['crowding']['max_trial_time'],
+                phase_cond = tuple(['stim','response_time','iti'])
+                phase_dur = tuple([self.settings['crowding']['stim_display_time'],
+                                self.settings['crowding']['max_resp_time'],
                                 self.settings['crowding']['iti']
                                 ])
 

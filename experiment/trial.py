@@ -183,7 +183,7 @@ class CrowdingTrial(Trial):
 
             # show instructions
             this_instruction_string = ('BLOCK %i\n\n\n\n\n\n'
-                                '[Ready? Press space bar to start]\n\n'%(self.blk_counter+1))
+                                '[Ready? Press space bar to start]\n\n'%(self.blk_counter))
 
             block_text = visual.TextStim(win = self.session.win, text = this_instruction_string,
                         color = (1, 1, 1), font = 'Helvetica Neue', pos = (0, 0), height = 40,
@@ -212,7 +212,7 @@ class CrowdingTrial(Trial):
                                         trial_dict = self.trial_dict,
                                         spacing_val = spacing_val)
 
-        else: # iti
+        elif self.phase_names[int(self.phase)] == 'iti': # iti
             if self.session.trial_counter <= self.ID:
                 self.session.trial_counter += 1 # update trial counter if no response was given before
 
@@ -239,8 +239,7 @@ class CrowdingTrial(Trial):
                     event_type = 'response'
                     self.session.total_responses += 1
                     
-                    if (ev in list(np.ravel(list(self.session.settings['keys']['target_key'].values())))) and \
-                        (self.phase_names[int(self.phase)] == 'stim'): # stim presentation
+                    if (ev in list(np.ravel(list(self.session.settings['keys']['target_key'].values())))): 
 
                         if self.session.trial_counter <= self.ID:
 
