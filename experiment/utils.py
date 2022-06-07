@@ -650,3 +650,44 @@ def get_flanker_pos(num_fl = 4, offset_ang = 45, distance_r = .8, hemi = 'right'
         fl_pos[num][0] += ecc if hemi == 'right' else -ecc
 
     return fl_pos
+
+
+def update_dots(ElementArrayStim, elem_positions = [], grid_pos = [], contrast =.4):
+    
+    """ quick fix func to update dot element array settings
+    should refurbish
+    
+    Parameters
+    ----------
+    ElementArrayStim: Psychopy object
+    	ElementArrayStim to be updated 
+    elem_positions: arr
+         numpy array with element positions to be updated and shown (N,2) -> (number of positions, [x,y])
+         to be used for opacity update
+    grid_pos: arr
+        numpy array with element positions (N,2) of whole grid -> (number of positions, [x,y])
+        
+    """
+
+    # set number of elements
+    nElements = grid_pos.shape[0]
+        
+    element_positions = grid_pos.copy()
+    
+    # update dot positions
+    element_positions[:elem_positions.shape[0]] = np.array([elem_positions])
+    
+    # set element contrasts
+    element_contrast = np.zeros(nElements)
+    element_contrast[:elem_positions.shape[0]]= contrast
+    
+    # set element opacities
+    element_opacities = np.zeros(nElements)
+    element_opacities[:elem_positions.shape[0]] = 1
+     
+    # set all of the above settings
+    ElementArrayStim.setOpacities(element_opacities)
+    ElementArrayStim.setContrs(element_contrast)
+    ElementArrayStim.setXYs(element_positions)
+
+    return(ElementArrayStim)

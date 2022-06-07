@@ -57,14 +57,16 @@ visual_search:
   set_size: [7, 16, 31] # set size (includes target)
   num_ecc: [4, 8, 12] # eccentricity of target
 
-  num_blks: 4 # number of blocks
   num_trl_cond: 5 #60 # number of trials per condition (ecc, set size, target type)
-  max_display_time: 30 # in seconds
-  max_iti: 2 #30 # in seconds
+  max_display_time: 10 # in seconds
+  max_iti: 1 # in seconds
 
   min_ecc: 2 # minimum eccentricity to plot stimuli (dva)
   max_ecc: 16 # max eccentricity to plot stimuli (dva) - if none then occupy whole screen
   ecc_grid_step: 2 # step size for ecc grid (dva)
+
+  task_dot_size: .05 #.1 # ratio of gabor size
+  task_dot_dist: .8 # ratio of gabor radius
 
   target_names: {'bL': {'color': 'blue', 'orientation': 'left'},
                  'pL': {'color': 'pink', 'orientation': 'left'},

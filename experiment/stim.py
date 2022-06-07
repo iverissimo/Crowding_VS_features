@@ -53,6 +53,9 @@ class VsearchStim(Stim):
         # element colors 
         self.element_color = np.ones((int(np.round(self.nElements)),3)) * np.array([204, 204, 204])
 
+        # task dot size
+        self.task_dot_size = np.ones((self.nElements)) * (self.session.size_pix * self.session.settings['visual_search']['task_dot_size'])
+
         # make element array for blue distractors
         self.session.distractors_Bcolor_stim = visual.ElementArrayStim(win = self.session.win, 
                                                                         nElements = self.nElements,
@@ -94,7 +97,15 @@ class VsearchStim(Stim):
                                                             contrs = self.element_contrast, 
                                                             colors = self.element_color, 
                                                             colorSpace = self.session.settings['stimuli']['colorSpace'])
-        
+
+        # make dot object for task dots
+        self.session.dot_stim = visual.ElementArrayStim(win = self.session.win, 
+                                                        nElements = self.nElements,
+                                                        units = 'pix',
+                                                        elementTex = None, 
+                                                        elementMask = 'circle',
+                                                        sizes = self.task_dot_size,
+                                                        xys = self.element_positions)          
         
     def draw(self, this_phase, trial_dict):
             
@@ -141,13 +152,20 @@ class VsearchStim(Stim):
                                                                     elem_sf = self.session.settings['stimuli']['sf'],
                                                                     elem_names = [trial_dict['target_name']],
                                                                     elem_ori = [trial_dict['target_ori']],
-                                                                    key_name = [trial_dict['target_name']]) 
+                                                                    key_name = [trial_dict['target_name']])
+
+                # update dot positions
+                self.session.dot_stim = utils.update_dots(ElementArrayStim = self.session.dot_stim, 
+                                                            elem_positions = np.concatenate((trial_dict['target_dot_pos'][np.newaxis,...],
+                                                                                            trial_dict['distractor_dot_pos'])), 
+                                                            grid_pos = self.grid_pos) 
                 
                 
                 # actually draw
                 self.session.distractors_Bcolor_stim.draw()
                 self.session.distractors_Pcolor_stim.draw()
                 self.session.target_stim.draw()
+                self.session.dot_stim.draw()
 
 
 class CrowdingStim(Stim):

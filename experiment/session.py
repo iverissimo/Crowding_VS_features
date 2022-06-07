@@ -164,9 +164,9 @@ class VsearchSession(ExpSession):
         # also including target and distractor positions on screen
         total_trials = 0
         trials_df = pd.DataFrame(columns = ['index', 'block' ,'set_size', 'target_name','target_ecc', 'target_pos', 
-                                            'target_color', 'target_ori', 
+                                            'target_color', 'target_ori', 'target_dot', 'target_dot_pos',
                                             'distractor_name', 'distractor_ecc', 'distractor_pos',
-                                            'distractor_color', 'distractor_ori'])
+                                            'distractor_color', 'distractor_ori', 'distractor_dot', 'distractor_dot_pos'])
 
         # in each block, target is different
         # but randomize across participants
@@ -195,6 +195,29 @@ class VsearchSession(ExpSession):
                 # and for distractors
                 distractor_pos_ind = random.sample([val for val in np.arange(len(self.grid_ecc)) if val != target_pos_ind],
                                                 condition_set_size[i]-1)
+
+                # randomly select in which side task dot will be
+                # relative to target 
+                target_dot = [random.choice(['L','R'])]
+                target_dot_pos = self.grid_pos[target_pos_ind].copy()
+                
+                if target_dot[0] == 'R':
+                    target_dot_pos[0] += self.size_pix/2 * self.settings['visual_search']['task_dot_dist']
+                else: 
+                    target_dot_pos[0] -= self.size_pix/2 * self.settings['visual_search']['task_dot_dist']
+                    
+                # and to distractors
+                distractor_dot_pos = self.grid_pos[distractor_pos_ind].copy()
+                distractor_dot = []
+                for w in range(condition_set_size[i]-1):
+                    
+                    distractor_dot.append(random.choice(['L','R']))
+                    
+                    if distractor_dot[w] == 'R':
+                        distractor_dot_pos[w][0] += self.size_pix/2 * self.settings['visual_search']['task_dot_dist']
+                    else: 
+                        distractor_dot_pos[w][0] -= self.size_pix/2 * self.settings['visual_search']['task_dot_dist']
+                
                 
                 # get distractor names
                 dist_name = np.repeat([n for n in self.target_names if n != condition[i]], 
@@ -209,11 +232,15 @@ class VsearchSession(ExpSession):
                                                         'target_pos': [self.grid_pos[target_pos_ind]], 
                                                         'target_color': [self.colors_dict[condition[i]]],
                                                         'target_ori': [self.ori_dict[condition[i]]],
+                                                        'target_dot': [target_dot], 
+                                                        'target_dot_pos': [target_dot_pos],
                                                         'distractor_name': [dist_name],
                                                         'distractor_ecc': [self.grid_ecc[distractor_pos_ind]],
                                                         'distractor_pos': [self.grid_pos[distractor_pos_ind]],
                                                         'distractor_color': [[self.colors_dict[v] for v in dist_name]], 
-                                                        'distractor_ori': [[self.ori_dict[v] for v in dist_name]]
+                                                        'distractor_ori': [[self.ori_dict[v] for v in dist_name]],
+                                                        'distractor_dot': [distractor_dot], 
+                                                        'distractor_dot_pos': [distractor_dot_pos]
                                                     }))
 
         self.total_trials = total_trials
