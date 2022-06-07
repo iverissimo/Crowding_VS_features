@@ -109,24 +109,30 @@ class VsearchTrial(Trial):
                     event_type = 'block_start'
                     self.stop_phase()
 
-                elif (ev in list(np.ravel(list(self.session.settings['keys']['target_key'].values())))) and \
-                    (self.phase_names[int(self.phase)] == 'stim'): # stim presentation
-
-                    event_type = 'response'
-                    self.session.total_responses += 1
-
-                    if (ev in self.session.settings['keys']['target_key'][self.trial_dict['target_name']]):
-                        self.session.correct_responses += 1
-                        print('correct answer')
-                    else:
-                        print('wrong answer')
-                    
-                    self.stop_phase()
-
                 else:
                     event_type = 'response'
-                    if ev in ['space']: ### TEMPORARY
-                        self.stop_phase() 
+
+                    if (ev in np.concatenate((self.session.settings['keys']['left_index'], self.session.settings['keys']['right_index']))) and \
+                        (self.phase_names[int(self.phase)] == 'stim'): # stim presentation
+
+                        self.session.total_responses += 1
+
+                        if (ev in self.session.settings['keys']['left_index']) and \
+                            (self.trial_dict['target_dot'][0] == 'L'):
+
+                            self.session.correct_responses += 1
+                            print('correct answer')
+
+                        elif (ev in self.session.settings['keys']['right_index']) and \
+                            (self.trial_dict['target_dot'][0] == 'R'):
+
+                            self.session.correct_responses += 1
+                            print('correct answer')
+
+                        else:
+                            print('wrong answer')
+                        
+                        self.stop_phase()
                     
 
                 # log everything into session data frame

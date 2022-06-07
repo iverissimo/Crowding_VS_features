@@ -51,7 +51,7 @@ keys: # keys to press, valid for laptop, scanner and behav lab
   target_key: {'bL': ['z'], 'bR': ['x'],
               'pL': ['n'], 'pR': ['m']}
   right_index: ['right']
-
+  left_index: ['left']
 
 visual_search:
   set_size: [7, 16, 31] # set size (includes target)
