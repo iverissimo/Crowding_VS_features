@@ -14,7 +14,7 @@ import pickle
 
 class VsearchTrial(Trial):
 
-    def __init__(self, session, trial_nr, phase_durations, phase_names, trial_dict, blk_counter = 0,
+    def __init__(self, session, trial_nr, phase_durations, phase_names, trial_dict, blk_nr,
                  timing = 'seconds', *args, **kwargs):
 
 
@@ -40,7 +40,7 @@ class VsearchTrial(Trial):
 
         # trial dictionary with relevant info
         self.trial_dict = trial_dict
-        self.blk_counter = blk_counter
+        self.blk_nr = blk_nr
 
         super().__init__(session, trial_nr, phase_durations, phase_names, verbose=False, *args, **kwargs)
 
@@ -54,8 +54,9 @@ class VsearchTrial(Trial):
         if self.phase_names[int(self.phase)] == 'block_start':
 
             # show instructions
-            this_instruction_string = ('BLOCK %i\n\n\n\n\n\n'
-                                '[Ready? Press space bar to start]\n\n'%(self.blk_counter))
+            this_instruction_string = ('BLOCK %i\n\n'
+                                        'Search for %s\n\n\n\n\n\n'
+                                '[Ready? Press space bar to start]\n\n'%((self.blk_nr + 1), self.session.blk_targets[self.blk_nr]))
 
             block_text = visual.TextStim(win = self.session.win, text = this_instruction_string,
                         color = (1, 1, 1), font = 'Helvetica Neue', pos = (0, 0), height = 40,
