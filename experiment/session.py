@@ -4,8 +4,8 @@ import numpy as np
 
 from exptools2.core import Session, PylinkEyetrackerSession
 
-from trial import VsearchTrial, CrowdingTrial #, FlickerTrial
-from stim import VsearchStim, CrowdingStim #, FlickerStim
+from trial import VsearchTrial, CrowdingTrial 
+from stim import VsearchStim, CrowdingStim 
 
 from psychopy import visual, tools
 from psychopy.data import QuestHandler, StairHandler
@@ -248,9 +248,7 @@ class VsearchSession(ExpSession):
 
         ## save dataframe with all trial info
         trials_df.to_csv(op.join(self.output_dir, self.output_str+'_trial_info.csv'), index = False)
- 
-        # max trial time, in seconds
-        max_trial_time = self.settings['visual_search']['max_display_time'] + self.settings['visual_search']['max_iti']
+
 
         # append all trials
         self.all_trials = []
@@ -265,8 +263,9 @@ class VsearchSession(ExpSession):
                 if  i == 0:
                     # insert block phase, to pause trials for a bit
                     # and maybe recalibration of eyetracker
-                    phase_cond = tuple(['block_start', 'stim','iti'])
-                    phase_dur = tuple([self.settings['visual_search']['max_iti']*100, # make this extremely long 
+                    phase_cond = tuple(['block_start', 'iti', 'stim','iti'])
+                    phase_dur = tuple([self.settings['visual_search']['max_iti']*100, # make this extremely long
+                                    self.settings['visual_search']['max_iti'], 
                                     self.settings['visual_search']['max_display_time'],
                                     self.settings['visual_search']['max_iti']
                                     ])
@@ -297,9 +296,17 @@ class VsearchSession(ExpSession):
             self.calibrate_eyetracker()
 
         # draw instructions wait a few seconds
-        this_instruction_string = ('During the experiment\nyou will see several gabors.\n\n'
+        this_instruction_string = ('During the experiment you will see several gabors.\n'
                                 'They can be pink or blue,\n'
-                                'and be tilted to the right or left\n'
+                                'and be tilted to the right or left'
+                                '\n\n\n'
+                                '[Press right index finger\nto continue]\n\n')
+
+        utils.draw_instructions(self.win, this_instruction_string, keys = self.settings['keys']['right_index'])
+
+        # draw instructions wait a few seconds
+        this_instruction_string = ('Each of them will have a small grey dot.\n'
+                                'On the right or left side'
                                 '\n\n\n'
                                 '[Press right index finger\nto continue]\n\n')
 
@@ -307,21 +314,20 @@ class VsearchSession(ExpSession):
 
         # draw instructions wait a few seconds
         this_instruction_string = ('Your task is to find\nthe UNIQUE gabor\n'
-                                'and indicate its color and orientation\n'
-                                'by pressing the keys.\n'
+                                'and indicate on which side the tiny dot is'
                                 '\n\n\n'
                                 '[Press right index finger\nto continue]\n\n')
 
         utils.draw_instructions(self.win, this_instruction_string, keys = self.settings['keys']['right_index'])
 
         # draw instructions wait a few seconds
-        this_instruction_string = ('You can move your eyes around\n'
+        this_instruction_string = ('You can move your eyes around'
                                 'to search for your target.\n\n'
-                                'Please return to the fixation cross\nat the end of each trial.\n'
-                                '\n\n\n'
-                                '[Ready? Press space bar to start]\n\n')
+                                'Please return to the fixation cross at the end of each trial.\n'
+                                '\n\n\nReady?\n'
+                                '[Press right index finger\nto continue]\n\n')
 
-        utils.draw_instructions(self.win, this_instruction_string, keys = ['space'])
+        utils.draw_instructions(self.win, this_instruction_string, keys = self.settings['keys']['right_index'])
 
         # start recording gaze
         if self.eyetracker_on:
@@ -528,10 +534,11 @@ class CrowdingSession(ExpSession):
 
             if blk_trials[blk_counter] == i:
                 # insert block phase, to pause trials for a bit
-                phase_cond = tuple(['block_start', 'stim', 'response_time','iti'])
+                phase_cond = tuple(['block_start', 'iti', 'stim', 'response_time','iti'])
                 phase_dur = tuple([1000, # make this extremely long
+                                self.settings['crowding']['iti'], # add iti here because we dont want to start immediately after block start
                                 self.settings['crowding']['stim_display_time'], 
-                                self.settings['crowding']['max_resp_time'], # max time to respond, in seconds
+                                self.settings['crowding']['max_resp_time']-self.settings['crowding']['stim_display_time'], # max time to respond, in seconds
                                 self.settings['crowding']['iti']
                                 ])
 
@@ -541,7 +548,7 @@ class CrowdingSession(ExpSession):
             else:
                 phase_cond = tuple(['stim','response_time','iti'])
                 phase_dur = tuple([self.settings['crowding']['stim_display_time'],
-                                self.settings['crowding']['max_resp_time'],
+                                self.settings['crowding']['max_resp_time']-self.settings['crowding']['stim_display_time'],
                                 self.settings['crowding']['iti']
                                 ])
 
@@ -643,9 +650,9 @@ class CrowdingSession(ExpSession):
             self.calibrate_eyetracker()
 
         # draw instructions wait a few seconds
-        this_instruction_string = ('During the experiment\nyou will see several gabors.\n\n'
+        this_instruction_string = ('During the experiment you will see several gabors.\n\n'
                                 'They can be pink or blue,\n'
-                                'and be tilted to the right or left\n'
+                                'and be tilted to the right or left'
                                 '\n\n\n'
                                 '[Press right index finger\nto continue]\n\n')
 
@@ -654,8 +661,7 @@ class CrowdingSession(ExpSession):
         # draw instructions wait a few seconds
         this_instruction_string = ('Your task is to indicate\n'
                                 'the color and orientation\n'
-                                'of the the middle gabor'
-                                'by pressing the keys.\n'
+                                'of the middle gabor.'
                                 '\n\n\n'
                                 '[Press right index finger\nto continue]\n\n')
 
@@ -674,9 +680,17 @@ class CrowdingSession(ExpSession):
                                     'Please fixate at the center,\n'
                                     'and do not move your eyes\n'
                                     '\n\n\n'
-                                    '[Ready? Press space bar to start]\n\n')
+                                    '[Press right index finger\nto continue]\n\n')
 
-        utils.draw_instructions(self.win, this_instruction_string, keys = ['space'])
+        utils.draw_instructions(self.win, this_instruction_string, keys = self.settings['keys']['right_index'])
+
+        # draw instructions wait a few seconds
+        this_instruction_string = ('\n\n\n\n'
+                                '\n\n\n\nReady?\n'
+                                '[Press right index finger\nto continue]\n\n')
+
+        utils.draw_instructions(self.win, this_instruction_string, keys = self.settings['keys']['right_index'], 
+                                image_path = [op.join(os.getcwd(),'instructions_imgs','crowding_keys.png')])
             
 
         # start recording gaze

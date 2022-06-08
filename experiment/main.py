@@ -3,7 +3,7 @@ import sys
 import os
 import os.path as op
 #import appnope
-from session import VsearchSession, CrowdingSession #, FlickerSession, PylinkEyetrackerSession
+from session import VsearchSession, CrowdingSession 
 
 
 # define main function
@@ -24,13 +24,13 @@ def main():
     ses_num = str(sys.argv[2]) # run number
 
     # task name dictionary
-    tasks = {'search': 'VisualSearch', 'crowding': 'Crowding', 'flicker': 'Flicker'}
+    tasks = {'search': 'VisualSearch', 'crowding': 'Crowding'}
     
     print('Running experiment for subject-%s, ses-%s'%(sj_num, ses_num))
 
     exp_type = ''
-    while exp_type not in ('search','crowding','flicker'):
-        exp_type = input('Which experiment to run (search/crowding/flicker)?: ')
+    while exp_type not in ('search','crowding'):
+        exp_type = input('Which experiment to run (search/crowding)?: ')
 
     print('Running %s task for subject-%s, ses-%s'%(exp_type, sj_num, ses_num))
 
@@ -73,11 +73,6 @@ def main():
                                   settings_file = 'experiment_settings.yml',
                                   eyetracker_on = False) #True)
 
-    # elif exp_type == 'flicker': # run feature pRF mapper
-    #      exp_sess = FlickerSession(output_str = output_str,
-    #                               output_dir = output_dir,
-    #                               settings_file = 'experiment_settings.yml',
-    #                               eyetracker_on = False)
    	                            
     exp_sess.run()
 

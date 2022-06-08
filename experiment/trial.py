@@ -1,4 +1,5 @@
 import os
+import os.path as op
 import numpy as np
 import yaml, re
 
@@ -55,15 +56,20 @@ class VsearchTrial(Trial):
 
             # show instructions
             this_instruction_string = ('BLOCK %i\n\n'
-                                        'Search for %s\n\n\n\n\n\n'
-                                '[Ready? Press space bar to start]\n\n'%((self.blk_nr + 1), self.session.blk_targets[self.blk_nr]))
+                                        'Search for\n\n\n\n\n\n\n\n'
+                                '\n\n[Press space bar to start]\n\n'%((self.blk_nr + 1)))
 
             block_text = visual.TextStim(win = self.session.win, text = this_instruction_string,
                         color = (1, 1, 1), font = 'Helvetica Neue', pos = (0, 0), height = 40,
                         italic = True, anchorHoriz = 'center', anchorVert = 'center')
     
-            # draw text again
+            # draw text
             block_text.draw()
+
+            img_stim = visual.ImageStim(win = self.session.win, 
+                                   image = op.join(os.getcwd(),'instructions_imgs','VS_keys_%s.png'%self.session.blk_targets[self.blk_nr]),
+                                   pos = (0, 0))
+            img_stim.draw()
 
         elif self.phase_names[int(self.phase)] == 'stim': 
 
@@ -190,7 +196,7 @@ class CrowdingTrial(Trial):
 
             # show instructions
             this_instruction_string = ('BLOCK %i\n\n\n\n\n\n'
-                                '[Ready? Press space bar to start]\n\n'%(self.blk_counter))
+                                '[Press space bar to start]\n\n'%(self.blk_counter))
 
             block_text = visual.TextStim(win = self.session.win, text = this_instruction_string,
                         color = (1, 1, 1), font = 'Helvetica Neue', pos = (0, 0), height = 40,

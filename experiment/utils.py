@@ -136,7 +136,7 @@ def get_grid_array(positions, ecc_range, convert2pix = True, screen = [1920, 108
     return pos_list, np.array(ecc_list) 
 
 
-def draw_instructions(win, instructions, keys = ['b'], visual_obj = [], 
+def draw_instructions(win, instructions, keys = ['b'], visual_obj = [], image_path = [],
                       color = (1, 1, 1), font = 'Helvetica Neue', pos = (0, 0), height = 40, #.65,
                         italic = True, anchorHoriz = 'center', anchorVert = 'center'):
     
@@ -166,13 +166,20 @@ def draw_instructions(win, instructions, keys = ['b'], visual_obj = [],
                         anchorVert = anchorVert
                         )
     
-    # draw text again
+    # draw text 
     text.draw()
 
     if len(visual_obj)>0:
         for w in range(len(visual_obj)):
             visual_obj[w].draw()
             
+    if len(image_path)>0:
+        for _,img in enumerate(image_path):
+            img_stim = visual.ImageStim(win = win, 
+                                   image = img,
+                                   pos = (0, 100))
+            img_stim.draw()
+    
     win.flip()
 
     key_pressed = event.waitKeys(keyList = keys)
