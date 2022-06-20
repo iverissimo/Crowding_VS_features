@@ -226,8 +226,15 @@ class CrowdingTrial(Trial):
                                         spacing_val = spacing_val)
 
         elif self.phase_names[int(self.phase)] == 'iti': # iti
-            if self.session.trial_counter <= self.ID:
-                self.session.trial_counter += 1 # update trial counter if no response was given before
+            
+            if self.session.trial_counter <= self.ID: # if no response was given before
+
+                user_response = 0
+                if self.trial_dict['crowding_type'] != 'unflankered':
+                    # update staircase
+                    self.session.staircases[self.trial_dict['crowding_type']].addResponse(user_response)
+
+                self.session.trial_counter += 1 # update trial counter 
 
         ## fixation cross
         self.session.fixation.draw() 
