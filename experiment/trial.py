@@ -256,21 +256,20 @@ class CrowdingTrial(Trial):
 
                         if self.session.trial_counter <= self.ID:
 
-                            # update color with answer
-                            if len(self.session.thisResp) > 0: # update with answer
-                                if self.trial_dict['crowding_type'] != 'unflankered':
-                                    # update staircase
-                                    self.session.staircases[self.trial_dict['crowding_type']].addResponse(self.session.thisResp[-1])
-                                    #print('The threshold is {s}'.format(s=self.session.staircases['ecc_ind_{e}'.format(e = self.session.ecc_ind_all[self.session.att_condition][self.session.bar_counter])].quantile()))
-                                # reset response again
-                                self.session.thisResp = []
-
                             ## get user response!
                             user_response = utils.get_response4staircase(event_key = ev, 
                                                                     target_key = self.session.settings['keys']['target_key'][self.trial_dict['target_name']])
 
                             self.session.thisResp.append(user_response)
                             self.session.correct_responses += user_response
+
+                            # update color with answer
+                            if len(self.session.thisResp) > 0: # update with answer
+                                if self.trial_dict['crowding_type'] != 'unflankered':
+                                    # update staircase
+                                    self.session.staircases[self.trial_dict['crowding_type']].addResponse(self.session.thisResp[-1])
+                                # reset response again
+                                self.session.thisResp = []
 
                             self.session.trial_counter += 1 # update trial counter   
 

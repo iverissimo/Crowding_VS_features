@@ -640,6 +640,7 @@ class CrowdingSession(ExpSession):
                             initial_val = self.distance_ratio_bounds[-1], 
                             minVal = self.distance_ratio_bounds[0], 
                             maxVal = self.distance_ratio_bounds[-1],
+                            pThreshold = self.settings['crowding']['staircase']['pThreshold'],
                             nUp = self.settings['crowding']['staircase']['nUp'], 
                             nDown = self.settings['crowding']['staircase']['nDown'], 
                             stepSize = self.settings['crowding']['staircase']['stepSize'], 
