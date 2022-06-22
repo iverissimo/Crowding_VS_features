@@ -59,7 +59,7 @@ visual_search:
 
   num_trl_cond: 20 # number of trials per condition (ecc, set size, target type)
   max_display_time: 10 # in seconds
-  max_iti: 2 # in seconds
+  max_iti: 200 # in seconds
 
   min_ecc: 2 # minimum eccentricity to plot stimuli (dva)
   max_ecc: 16 # max eccentricity to plot stimuli (dva) - if none then occupy whole screen
