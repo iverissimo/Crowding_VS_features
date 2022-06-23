@@ -79,7 +79,6 @@ class VsearchTrial(Trial):
 
         else: # ITI period 
             if self.session.eyetracker_on: # if we have eyetracker
-                print('to be tested!!!')
 
                 # get current gaze
                 curr_gaze = utils.getCurSamp(self.session.tracker, screen = self.session.screen)
@@ -188,15 +187,19 @@ class CrowdingTrial(Trial):
     
     def draw(self): 
 
-        """ Draw stimuli - target abnd flankers - for each trial """
+        """ Draw stimuli - target and flankers - for each trial """
 
         current_time = self.session.clock.getTime() # get time
 
         if self.phase_names[int(self.phase)] == 'block_start':
 
             # show instructions
-            this_instruction_string = ('BLOCK %i\n\n\n\n\n\n'
-                                '[Press space bar to start]\n\n'%(self.blk_counter))
+            if self.blk_counter == 0:
+                this_instruction_string = ('BLOCK %i\n\n\n\n\n\n'
+                                '\n\n\n'%(self.blk_counter + 1))
+            else:
+                this_instruction_string = ('BLOCK %i\n\n\n\n\n\n'
+                                    '[Press space bar to start]\n\n'%(self.blk_counter + 1))
 
             block_text = visual.TextStim(win = self.session.win, text = this_instruction_string,
                         color = (1, 1, 1), font = 'Helvetica Neue', pos = (0, 0), height = 40,
@@ -258,29 +261,31 @@ class CrowdingTrial(Trial):
                 else:
                     event_type = 'response'
                     self.session.total_responses += 1
+
+                    if self.phase_names[int(self.phase)] == 'response_time':
                     
-                    if (ev in list(np.ravel(list(self.session.settings['keys']['target_key'].values())))): 
+                        if (ev in list(np.ravel(list(self.session.settings['keys']['target_key'].values())))): 
 
-                        if self.session.trial_counter <= self.ID:
+                            if self.session.trial_counter <= self.ID:
 
-                            ## get user response!
-                            user_response = utils.get_response4staircase(event_key = ev, 
-                                                                    target_key = self.session.settings['keys']['target_key'][self.trial_dict['target_name']])
+                                ## get user response!
+                                user_response = utils.get_response4staircase(event_key = ev, 
+                                                                        target_key = self.session.settings['keys']['target_key'][self.trial_dict['target_name']])
 
-                            self.session.thisResp.append(user_response)
-                            self.session.correct_responses += user_response
+                                self.session.thisResp.append(user_response)
+                                self.session.correct_responses += user_response
 
-                            # update color with answer
-                            if len(self.session.thisResp) > 0: # update with answer
-                                if self.trial_dict['crowding_type'] != 'unflankered':
-                                    # update staircase
-                                    self.session.staircases[self.trial_dict['crowding_type']].addResponse(self.session.thisResp[-1])
-                                # reset response again
-                                self.session.thisResp = []
+                                # update color with answer
+                                if len(self.session.thisResp) > 0: # update with answer
+                                    if self.trial_dict['crowding_type'] != 'unflankered':
+                                        # update staircase
+                                        self.session.staircases[self.trial_dict['crowding_type']].addResponse(self.session.thisResp[-1])
+                                    # reset response again
+                                    self.session.thisResp = []
 
-                            self.session.trial_counter += 1 # update trial counter   
+                                self.session.trial_counter += 1 # update trial counter   
 
-                        self.stop_phase()
+                            self.stop_phase()
 
                 # log everything into session data frame
                 idx = self.session.global_log.shape[0]
