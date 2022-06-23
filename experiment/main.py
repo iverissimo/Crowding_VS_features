@@ -3,7 +3,7 @@ import sys
 import os
 import os.path as op
 #import appnope
-from session import VsearchSession, CrowdingSession 
+from session import VsearchSession, CrowdingSession, TrainCrowdingSession 
 
 
 # define main function
@@ -21,18 +21,18 @@ def main():
                         'as 2nd argument in the command line!')
     
     sj_num = str(sys.argv[1]).zfill(3) # subject number
-    ses_num = str(sys.argv[2]) # run number
+    ses_type = str(sys.argv[2]) # run number
 
     # task name dictionary
     tasks = {'search': 'VisualSearch', 'crowding': 'Crowding'}
     
-    print('Running experiment for subject-%s, ses-%s'%(sj_num, ses_num))
+    print('Running experiment for subject-%s, ses-%s'%(sj_num, ses_type))
 
     exp_type = ''
     while exp_type not in ('search','crowding'):
         exp_type = input('Which experiment to run (search/crowding)?: ')
 
-    print('Running %s task for subject-%s, ses-%s'%(exp_type, sj_num, ses_num))
+    print('Running %s task for subject-%s, ses-%s'%(exp_type, sj_num, ses_type))
 
     # make output dir
     base_dir = op.split(os.getcwd())[0] # main path for all folders of project
@@ -44,7 +44,7 @@ def main():
     print('saving files in %s'%output_dir)
 
     # string for output data
-    output_str = 'sub-{sj}_ses-{ses}_task-{task}'.format(sj = sj_num, ses = ses_num, task = tasks[exp_type])
+    output_str = 'sub-{sj}_ses-{ses}_task-{task}'.format(sj = sj_num, ses = ses_type, task = tasks[exp_type])
 
     # if file already exists
     behav_file = op.join(output_dir,'{behav}_events.tsv'.format(behav=output_str))
@@ -60,18 +60,28 @@ def main():
 
 
     # load approriate class object to be run
-    if exp_type == 'search': # run standard pRF mapper
+    #
+    if exp_type == 'search': # run visual search task
 
         exp_sess = VsearchSession(output_str = output_str,
                               output_dir = output_dir,
                               settings_file = 'experiment_settings.yml',
                               eyetracker_on = False) #True)
 
-    elif exp_type == 'crowding': # run feature pRF mapper
-         exp_sess = CrowdingSession(output_str = output_str,
+    elif exp_type == 'crowding': # run crowding task
+        
+        if ses_type in ['practice', 'train']: # short practice ses, to understand task
+
+            exp_sess = TrainCrowdingSession(output_str = output_str,
                                   output_dir = output_dir,
                                   settings_file = 'experiment_settings.yml',
                                   eyetracker_on = False) #True)
+        
+        else: # real deal
+            exp_sess = CrowdingSession(output_str = output_str,
+                                    output_dir = output_dir,
+                                    settings_file = 'experiment_settings.yml',
+                                    eyetracker_on = False) #True)
 
    	                            
     exp_sess.run()
