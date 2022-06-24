@@ -745,6 +745,7 @@ class TrainCrowdingSession(CrowdingSession):
 
         self.stim_display_time = .15
         self.iti = 1
+        self.feedback_time = .5
 
     
     def create_trials(self):
@@ -756,6 +757,7 @@ class TrainCrowdingSession(CrowdingSession):
         self.correct_responses = 0
         self.trial_counter = 0
         self.thisResp = []
+        self.feedback_response = []
 
         # number of trials per condition
         num_cond_trials = {}
@@ -884,30 +886,33 @@ class TrainCrowdingSession(CrowdingSession):
             # set phase conditions (for logging) and durations
             if self.blk_trials[blk_counter] == i:
                 # insert block phase, to pause trials for a bit
-                phase_cond = tuple(['block_start', 'iti', 'stim', 'response_time','iti'])
+                phase_cond = tuple(['block_start', 'iti', 'stim', 'response_time', 'feeback', 'iti'])
                 blk_start_dur = self.iti if blk_counter == 0 else 1000 # in first block, we just want to start
 
                 phase_dur = tuple([blk_start_dur, # make this extremely long
                                 self.iti, # add iti here because we dont want to start immediately after block start
                                 self.stim_display_time, 
                                 self.settings['crowding']['max_resp_time']-self.stim_display_time, # max time to respond, in seconds
-                                self.iti
+                                self.feedback_time,
+                                self.iti - self.feedback_time
                                 ])
 
                 if blk_counter < self.settings['crowding']['num_blks'] - 1: 
                     blk_counter += 1
 
             elif (i > 0) and (i == self.blk_trials[blk_counter] - 1):
-                phase_cond = tuple(['stim','response_time','iti'])
+                phase_cond = tuple(['stim','response_time','feeback', 'iti'])
                 phase_dur = tuple([self.stim_display_time,
                                 self.settings['crowding']['max_resp_time']-self.stim_display_time,
-                                self.iti * 3
+                                self.feedback_time,
+                                self.iti * 3 - self.feedback_time
                                 ])
             else:
-                phase_cond = tuple(['stim','response_time','iti'])
+                phase_cond = tuple(['stim','response_time','feeback', 'iti'])
                 phase_dur = tuple([self.stim_display_time,
                                 self.settings['crowding']['max_resp_time']-self.stim_display_time,
-                                self.iti
+                                self.feedback_time,
+                                self.iti - self.feedback_time
                                 ])
 
             self.all_trials.append(TrainCrowdingTrial(session = self ,

@@ -377,15 +377,6 @@ class TrainCrowdingTrial(Trial):
 
         elif self.phase_names[int(self.phase)] == 'iti': # iti
             
-            if self.session.trial_counter <= self.ID: # if no response was given before
-
-                user_response = 0
-                if self.trial_dict['crowding_type'] != 'unflankered':
-                    # update staircase
-                    self.session.staircases[self.trial_dict['crowding_type']].addResponse(user_response)
-
-                self.session.trial_counter += 1 # update trial counter 
-
             if self.ID == int(self.session.blk_trials[self.blk_counter+1] - 1): # if last trial of the block
 
                 this_instruction_string = ('Accuracy is %.2f%%\n\n\n\n'%(self.session.correct_responses/self.ID*100))
@@ -397,10 +388,29 @@ class TrainCrowdingTrial(Trial):
                 # draw text again
                 acc_text.draw()
 
-            if feedback_response[-1] == 1: # if last response was correct
+            
+        elif self.phase_names[int(self.phase)] == 'feeback': # if its a feedback period
+
+            if self.session.trial_counter <= self.ID: # if no response was given before
+
+                user_response = 0
+                if self.trial_dict['crowding_type'] != 'unflankered':
+                    # update staircase
+                    self.session.staircases[self.trial_dict['crowding_type']].addResponse(user_response)
+
+                self.session.trial_counter += 1 # update trial counter
+                self.session.feedback_response.append(user_response) # append user (lack of) response for feedback 
+
+            # update color of fixation cross, to reflect performance
+            if self.session.feedback_response[-1] == 1: # if last response was correct
                 self.session.fixation.lineColor = [-1, 1, -1] # turn green
             else:
                 self.session.fixation.lineColor = [1, -1, -1] # turn red (response incorrect)
+
+
+        if self.phase_names[int(self.phase)] != 'feeback': # for all phases that not feedback, add normal fixation color
+            # set color of fixation cross as white again
+            self.session.fixation.lineColor = [1, 1, 1]
 
         ## fixation cross
         self.session.fixation.draw() 
@@ -437,6 +447,8 @@ class TrainCrowdingTrial(Trial):
 
                                 self.session.thisResp.append(user_response)
                                 self.session.correct_responses += user_response
+
+                                self.session.feedback_response.append(user_response) # append response to then give feedback during ITI
 
                                 # update color with answer
                                 if len(self.session.thisResp) > 0: # update with answer
