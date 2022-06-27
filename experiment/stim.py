@@ -158,7 +158,9 @@ class VsearchStim(Stim):
                 self.session.dot_stim = utils.update_dots(ElementArrayStim = self.session.dot_stim, 
                                                             elem_positions = np.concatenate((trial_dict['target_dot_pos'][np.newaxis,...],
                                                                                             trial_dict['distractor_dot_pos'])), 
-                                                            grid_pos = self.grid_pos) 
+                                                            grid_pos = self.grid_pos,
+                                                            contrast = self.session.task_dot_contrast,
+                                                            opac = self.session.task_dot_opacity) 
                 
                 
                 # actually draw

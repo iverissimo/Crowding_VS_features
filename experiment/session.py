@@ -132,6 +132,10 @@ class VsearchSession(ExpSession):
         if self.eyetracker_on:
             self.settings['visual_search']['max_iti'] = self.settings['visual_search']['max_iti']*100
 
+        # set task dot contrast and opacity
+        self.task_dot_contrast = self.settings['visual_search']['task_dot_contrast']
+        self.task_dot_opacity = self.settings['visual_search']['task_dot_opacity']
+
     
     def create_stimuli(self):
 
@@ -300,7 +304,7 @@ class VsearchSession(ExpSession):
             self.calibrate_eyetracker()
 
         # draw instructions wait a few seconds
-        this_instruction_string = ('During the experiment you will see several gabors.\n'
+        this_instruction_string = ('During the experiment you will see several striped shapes.\n'
                                 'They can be pink or blue,\n'
                                 'and be tilted to the right or left'
                                 '\n\n\n'
@@ -310,14 +314,14 @@ class VsearchSession(ExpSession):
 
         # draw instructions wait a few seconds
         this_instruction_string = ('Each of them will have a small grey dot.\n'
-                                'On the right or left side'
+                                'On the center-right or center-left side'
                                 '\n\n\n'
                                 '[Press right arrow key\nto continue]\n\n')
 
         utils.draw_instructions(self.win, this_instruction_string, keys = self.settings['keys']['right_index'])
 
         # draw instructions wait a few seconds
-        this_instruction_string = ('Your task is to find\nthe UNIQUE gabor\n'
+        this_instruction_string = ('Your task is to find\nthe UNIQUE shape\n'
                                 'and indicate on which side the tiny dot is'
                                 '\n\n\n'
                                 '[Press right arrow key\nto continue]\n\n')
@@ -656,7 +660,7 @@ class CrowdingSession(ExpSession):
             self.calibrate_eyetracker()
 
         # draw instructions wait a few seconds
-        this_instruction_string = ('During the experiment you will see several gabors.\n\n'
+        this_instruction_string = ('During the experiment you will see several striped shapes.\n\n'
                                 'They can be pink or blue,\n'
                                 'and be tilted to the right or left'
                                 '\n\n\n'
@@ -667,7 +671,7 @@ class CrowdingSession(ExpSession):
         # draw instructions wait a few seconds
         this_instruction_string = ('Your task is to indicate\n'
                                 'the color and orientation\n'
-                                'of the middle gabor.'
+                                'of the middle striped shape.'
                                 '\n\n\n'
                                 '[Press right arrow key\nto continue]\n\n')
 
@@ -947,7 +951,7 @@ class TrainCrowdingSession(CrowdingSession):
             self.calibrate_eyetracker()
 
         # draw instructions wait a few seconds
-        this_instruction_string = ('During the experiment you will see several gabors.\n\n'
+        this_instruction_string = ('During the experiment you will see several striped shapes.\n\n'
                                 'They can be pink or blue,\n'
                                 'and be tilted to the right or left'
                                 '\n\n\n'
@@ -958,7 +962,7 @@ class TrainCrowdingSession(CrowdingSession):
         # draw instructions wait a few seconds
         this_instruction_string = ('Your task is to indicate\n'
                                 'the color and orientation\n'
-                                'of the middle gabor.'
+                                'of the middle striped shape.'
                                 '\n\n\n'
                                 '[Press right arrow key\nto continue]\n\n')
 

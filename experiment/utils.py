@@ -659,7 +659,7 @@ def get_flanker_pos(num_fl = 4, offset_ang = 45, distance_r = .8, hemi = 'right'
     return fl_pos
 
 
-def update_dots(ElementArrayStim, elem_positions = [], grid_pos = [], contrast =.4):
+def update_dots(ElementArrayStim, elem_positions = [], grid_pos = [], contrast =.2, opac = .3): #4):
     
     """ quick fix func to update dot element array settings
     should refurbish
@@ -690,7 +690,7 @@ def update_dots(ElementArrayStim, elem_positions = [], grid_pos = [], contrast =
     
     # set element opacities
     element_opacities = np.zeros(nElements)
-    element_opacities[:elem_positions.shape[0]] = 1
+    element_opacities[:elem_positions.shape[0]] = opac
      
     # set all of the above settings
     ElementArrayStim.setOpacities(element_opacities)
