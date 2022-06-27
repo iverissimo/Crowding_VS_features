@@ -4,7 +4,7 @@ import numpy as np
 
 from exptools2.core import Session, PylinkEyetrackerSession
 
-from trial import VsearchTrial, CrowdingTrial 
+from trial import VsearchTrial, CrowdingTrial, TrainCrowdingTrial
 from stim import VsearchStim, CrowdingStim 
 
 from psychopy import visual, tools
@@ -127,6 +127,10 @@ class VsearchSession(ExpSession):
                                                     constraint_bounds_pix = self.screen/2 - self.size_pix/2)
 
         print('Possible grid positions %i'%self.grid_pos.shape[0])
+
+        # if we have an eyetracker on, then change ITI duration (because now we rely on fixations)
+        if self.eyetracker_on:
+            self.settings['visual_search']['max_iti'] = self.settings['visual_search']['max_iti']*100
 
     
     def create_stimuli(self):
@@ -300,7 +304,7 @@ class VsearchSession(ExpSession):
                                 'They can be pink or blue,\n'
                                 'and be tilted to the right or left'
                                 '\n\n\n'
-                                '[Press right index finger\nto continue]\n\n')
+                                '[Press right arrow key\nto continue]\n\n')
 
         utils.draw_instructions(self.win, this_instruction_string, keys = self.settings['keys']['right_index'])
 
@@ -308,7 +312,7 @@ class VsearchSession(ExpSession):
         this_instruction_string = ('Each of them will have a small grey dot.\n'
                                 'On the right or left side'
                                 '\n\n\n'
-                                '[Press right index finger\nto continue]\n\n')
+                                '[Press right arrow key\nto continue]\n\n')
 
         utils.draw_instructions(self.win, this_instruction_string, keys = self.settings['keys']['right_index'])
 
@@ -316,7 +320,7 @@ class VsearchSession(ExpSession):
         this_instruction_string = ('Your task is to find\nthe UNIQUE gabor\n'
                                 'and indicate on which side the tiny dot is'
                                 '\n\n\n'
-                                '[Press right index finger\nto continue]\n\n')
+                                '[Press right arrow key\nto continue]\n\n')
 
         utils.draw_instructions(self.win, this_instruction_string, keys = self.settings['keys']['right_index'])
 
@@ -325,7 +329,7 @@ class VsearchSession(ExpSession):
                                 'to search for your target.\n\n'
                                 'Please return to the fixation cross at the end of each trial.\n'
                                 '\n\n\nReady?\n'
-                                '[Press right index finger\nto continue]\n\n')
+                                '[Press right arrow key\nto continue]\n\n')
 
         utils.draw_instructions(self.win, this_instruction_string, keys = self.settings['keys']['right_index'])
 
@@ -531,18 +535,19 @@ class CrowdingSession(ExpSession):
         for i in np.arange(self.total_trials):
 
             # set phase conditions (for logging) and durations
-
             if blk_trials[blk_counter] == i:
                 # insert block phase, to pause trials for a bit
                 phase_cond = tuple(['block_start', 'iti', 'stim', 'response_time','iti'])
-                phase_dur = tuple([1000, # make this extremely long
+                blk_start_dur = self.settings['crowding']['iti'] if blk_counter == 0 else 1000 # in first block, we just want to start
+
+                phase_dur = tuple([blk_start_dur, # make this extremely long
                                 self.settings['crowding']['iti'], # add iti here because we dont want to start immediately after block start
                                 self.settings['crowding']['stim_display_time'], 
                                 self.settings['crowding']['max_resp_time']-self.settings['crowding']['stim_display_time'], # max time to respond, in seconds
                                 self.settings['crowding']['iti']
                                 ])
 
-                if blk_counter < self.settings['crowding']['num_blks']-1: 
+                if blk_counter < self.settings['crowding']['num_blks'] - 1: 
                     blk_counter += 1
 
             else:
@@ -557,7 +562,7 @@ class CrowdingSession(ExpSession):
                                                 phase_durations = phase_dur,
                                                 phase_names = phase_cond,
                                                 trial_dict = trials_df.iloc[i].to_dict(),
-                                                blk_counter = blk_counter
+                                                blk_counter = blk_counter - 1 
                                                 ))
 
     
@@ -655,7 +660,7 @@ class CrowdingSession(ExpSession):
                                 'They can be pink or blue,\n'
                                 'and be tilted to the right or left'
                                 '\n\n\n'
-                                '[Press right index finger\nto continue]\n\n')
+                                '[Press right arrow key\nto continue]\n\n')
 
         utils.draw_instructions(self.win, this_instruction_string, keys = self.settings['keys']['right_index'])
 
@@ -664,7 +669,7 @@ class CrowdingSession(ExpSession):
                                 'the color and orientation\n'
                                 'of the middle gabor.'
                                 '\n\n\n'
-                                '[Press right index finger\nto continue]\n\n')
+                                '[Press right arrow key\nto continue]\n\n')
 
         utils.draw_instructions(self.win, this_instruction_string, keys = self.settings['keys']['right_index'])
 
@@ -672,7 +677,7 @@ class CrowdingSession(ExpSession):
         this_instruction_string = ('Sometimes, there will only be one shape presented\n'
                                 ' so do not let this confuse you.\n'
                                 '\n\n\n'
-                                '[Press right index finger\nto continue]\n\n')
+                                '[Press right arrow key\nto continue]\n\n')
 
         utils.draw_instructions(self.win, this_instruction_string, keys = self.settings['keys']['right_index'])
 
@@ -681,16 +686,307 @@ class CrowdingSession(ExpSession):
                                     'Please fixate at the center,\n'
                                     'and do not move your eyes\n'
                                     '\n\n\n'
-                                    '[Press right index finger\nto continue]\n\n')
+                                    '[Press right arrow key\nto continue]\n\n')
 
         utils.draw_instructions(self.win, this_instruction_string, keys = self.settings['keys']['right_index'])
 
         # draw instructions wait a few seconds
         this_instruction_string = ('\n\n\n\n'
                                 '\n\n\n\nReady?\n'
-                                '[Press right index finger\nto continue]\n\n')
+                                '[Press space bar\nto start]\n\n')
 
-        utils.draw_instructions(self.win, this_instruction_string, keys = self.settings['keys']['right_index'], 
+        utils.draw_instructions(self.win, this_instruction_string, keys = ['space'], 
+                                image_path = [op.join(os.getcwd(),'instructions_imgs','crowding_keys.png')])
+            
+
+        # start recording gaze
+        if self.eyetracker_on:
+            self.start_recording_eyetracker()
+
+        self.start_experiment()
+        
+        # cycle through trials
+        for trl in self.all_trials: 
+            trl.run() # run forrest run
+
+        print('Expected number of responses: %d'%(self.total_trials))
+        print('Total subject responses: %d'%self.total_responses)
+        print('Correct responses: %d'%self.correct_responses)
+        print('Overall accuracy %.2f %%'%(self.correct_responses/self.total_trials*100))
+
+        self.close_all() # close session
+
+
+class TrainCrowdingSession(CrowdingSession):
+   
+    def __init__(self, output_str, output_dir, settings_file, eyetracker_on):  # initialize child class
+
+        """ Initializes TrainCrowdingSession object.  
+      
+        Parameters
+        ----------
+        output_str : str
+            Basename for all output-files (like logs), e.g., "sub-01_task-PRFstandard_run-1"
+        output_dir : str
+            Path to desired output-directory (default: None, which results in $pwd/logs)
+        settings_file : str
+            Path to yaml-file with settings (default: None, which results in the package's
+            default settings file (in data/default_settings.yml)
+        """
+
+        # need to initialize parent class (ExpSession), indicating output infos
+        super().__init__(output_str = output_str, output_dir = output_dir, settings_file = settings_file, 
+                        eyetracker_on = eyetracker_on)
+
+        # number of trials per visual hemifield, for a specific type of target and crowding type
+        self.train_num_trl_cond = 4
+        # ratio of unflanked trials
+        self.unflank_ratio = 1/6
+
+        self.stim_display_time = .15
+        self.iti = 1
+        self.feedback_time = .5
+
+    
+    def create_trials(self):
+
+        """ Creates trials (before running the session) """
+
+        # some counters for internal bookeeping
+        self.total_responses = 0
+        self.correct_responses = 0
+        self.trial_counter = 0
+        self.thisResp = []
+        self.feedback_response = []
+
+        # number of trials per condition
+        num_cond_trials = {}
+        total_trials = 0
+        crowding_type = [] # to store crowding type
+        hemifield = [] # to store hemifield
+        target_name = [] # target name
+                    
+        for k in self.settings['crowding']['crwd_type']:
+            
+            # number of trials for this crowding type
+            num_cond_trials[k] = len(self.settings['crowding']['target_names'].keys()) * \
+                                self.train_num_trl_cond * 2 # num target x min_num trials x 2 hemifields
+            # update total number of trials
+            total_trials += num_cond_trials[k]
+
+            # set list with crowdign type name, for bookeeping
+            crowding_type += list(np.tile(k, num_cond_trials[k]))
+            
+            # target name
+            target_name += list(np.repeat(list(self.settings['crowding']['target_names'].keys()),
+                                    self.train_num_trl_cond * 2))
+            
+            # which hemifield we're displaying the stimuli
+            hemifield += list(np.tile(['left', 'right'],
+                                len(self.settings['crowding']['target_names'].keys()) * \
+                                    self.train_num_trl_cond))
+            
+        # need to add unflankered trials
+        ## need to add same for unflankered trials
+        num_cond_trials['unflankered'] = int(total_trials * self.unflank_ratio)
+        self.total_trials = total_trials + num_cond_trials['unflankered']
+
+        crowding_type += list(np.tile('unflankered', num_cond_trials['unflankered']))
+
+        target_name += list(np.repeat(list(self.settings['crowding']['target_names'].keys()),
+                                    int(num_cond_trials['unflankered']/len(self.settings['crowding']['target_names'].keys()))))
+
+        hemifield += list(np.tile(['left', 'right'],
+                                int(num_cond_trials['unflankered']/2)))
+
+        print('Total number of trials: %i'%self.total_trials)
+
+        # now make df with trial info, 
+        # also including target and distractor positions on screen
+        trials_df = pd.DataFrame(columns = ['index', 'crowding_type', 'hemifield',
+                                            'target_name','target_pos', 
+                                            'target_color', 'target_ori', 
+                                            'distractor_name', 'distractor_pos',
+                                            'distractor_color', 'distractor_ori'])
+
+        # randomize trials
+        random_ind = np.arange(self.total_trials)
+        np.random.shuffle(random_ind)
+
+        for trial_num, i in enumerate(random_ind):
+
+            # stimuli x position
+            x_pos_stim = -self.ecc_pix  if hemifield[i] == 'left' else self.ecc_pix
+
+            # set initial distractor position
+            dist_pos = utils.get_flanker_pos(num_fl = self.n_flankers, 
+                                            offset_ang = self.settings['crowding']['offset_ang'], 
+                                            distance_r = self.distance_ratio_bounds[-1], hemi = hemifield[i],
+                                            ecc = self.ecc_pix)
+
+            # get distractor (flanker) names
+            if crowding_type[i] == 'orientation':
+
+                dist_name = utils.get_flanker_name(target_name[i],
+                                                        num_fl = self.n_flankers,
+                                                        list_cond = list(self.ori_dict.keys()), 
+                                                        same_ori = False, same_color = True)
+            elif crowding_type[i] == 'color':
+
+                dist_name = utils.get_flanker_name(target_name[i],
+                                                        num_fl = self.n_flankers,
+                                                        list_cond = list(self.ori_dict.keys()), 
+                                                        same_ori = True, same_color = False)
+            elif crowding_type[i] == 'conjunction':
+
+                dist_name = utils.get_flanker_name(target_name[i],
+                                                        num_fl = self.n_flankers,
+                                                        list_cond = list(self.ori_dict.keys()), 
+                                                        same_ori = False, same_color = False)
+
+            else: ## unflankered
+                dist_name = list(np.repeat(['None'],self.n_flankers))
+
+
+            ## append distractor color and orientation
+            if crowding_type[i] == 'unflankered':
+                dist_col = list(np.repeat(['None'],self.n_flankers))
+                dist_ori = list(np.repeat(['None'],self.n_flankers))
+            else:
+                dist_col = [self.colors_dict[x] for x in dist_name]
+                dist_ori = [self.ori_dict[x] for x in dist_name]
+
+            # append trial!
+            trials_df = trials_df.append(pd.DataFrame({'index': [trial_num],
+                                                    'crowding_type': [crowding_type[i]],
+                                                    'hemifield': [hemifield[i]],
+                                                    'target_name': [target_name[i]],
+                                                    'target_pos': [[x_pos_stim, 0]],
+                                                    'target_color': [self.colors_dict[target_name[i]]],
+                                                    'target_ori': [self.ori_dict[target_name[i]]],
+                                                    'distractor_name':[dist_name],
+                                                    'distractor_pos': [dist_pos],
+                                                    'distractor_color': [dist_col],
+                                                    'distractor_ori': [dist_ori]
+                                                }))
+
+        ## save dataframe with all trial info
+        trials_df.to_csv(op.join(self.output_dir, self.output_str+'_trial_info.csv'), index = False)
+
+        # trial number to start a new block
+        # (this is, introduce a pause and maybe recalibration of eyetracker)
+        self.blk_trials = np.linspace(0, self.total_trials, 
+                                self.settings['crowding']['num_blks']+1, dtype=int)[:-1]
+        blk_counter = 0
+
+        # append all trials
+        self.all_trials = []
+        for i in np.arange(self.total_trials):
+
+            # set phase conditions (for logging) and durations
+            if self.blk_trials[blk_counter] == i:
+                # insert block phase, to pause trials for a bit
+                phase_cond = tuple(['block_start', 'iti', 'stim', 'response_time', 'feeback', 'iti'])
+                blk_start_dur = self.iti if blk_counter == 0 else 1000 # in first block, we just want to start
+
+                phase_dur = tuple([blk_start_dur, # make this extremely long
+                                self.iti, # add iti here because we dont want to start immediately after block start
+                                self.stim_display_time, 
+                                self.settings['crowding']['max_resp_time']-self.stim_display_time, # max time to respond, in seconds
+                                self.feedback_time,
+                                self.iti - self.feedback_time
+                                ])
+
+                if blk_counter < self.settings['crowding']['num_blks'] - 1: 
+                    blk_counter += 1
+
+            elif (i > 0) and (i == self.blk_trials[blk_counter] - 1):
+                phase_cond = tuple(['stim','response_time','feeback', 'iti'])
+                phase_dur = tuple([self.stim_display_time,
+                                self.settings['crowding']['max_resp_time']-self.stim_display_time,
+                                self.feedback_time,
+                                self.iti * 3 - self.feedback_time
+                                ])
+            else:
+                phase_cond = tuple(['stim','response_time','feeback', 'iti'])
+                phase_dur = tuple([self.stim_display_time,
+                                self.settings['crowding']['max_resp_time']-self.stim_display_time,
+                                self.feedback_time,
+                                self.iti - self.feedback_time
+                                ])
+
+            self.all_trials.append(TrainCrowdingTrial(session = self ,
+                                                trial_nr = trials_df.iloc[i]['index'],
+                                                phase_durations = phase_dur,
+                                                phase_names = phase_cond,
+                                                trial_dict = trials_df.iloc[i].to_dict(),
+                                                blk_counter = blk_counter - 1 
+                                                ))
+
+
+    def run(self):
+        """ Loops over trials and runs them """
+
+        # create trials before running!
+        self.create_stimuli()
+        self.create_trials()
+
+        # create staircase
+        self.create_staircase(stair_names = self.settings['crowding']['crwd_type'],
+                            initial_val = self.distance_ratio_bounds[-1], 
+                            minVal = self.distance_ratio_bounds[0], 
+                            maxVal = self.distance_ratio_bounds[-1],
+                            pThreshold = self.settings['crowding']['staircase']['pThreshold'],
+                            nUp = self.settings['crowding']['staircase']['nUp'], 
+                            nDown = self.settings['crowding']['staircase']['nDown'], 
+                            stepSize = self.settings['crowding']['staircase']['stepSize'], 
+                            quest_stair = self.settings['crowding']['staircase']['quest']) 
+
+        # if eyetracking then calibrate
+        if self.eyetracker_on:
+            self.calibrate_eyetracker()
+
+        # draw instructions wait a few seconds
+        this_instruction_string = ('During the experiment you will see several gabors.\n\n'
+                                'They can be pink or blue,\n'
+                                'and be tilted to the right or left'
+                                '\n\n\n'
+                                '[Press right arrow key\nto continue]\n\n')
+
+        utils.draw_instructions(self.win, this_instruction_string, keys = self.settings['keys']['right_index'])
+
+        # draw instructions wait a few seconds
+        this_instruction_string = ('Your task is to indicate\n'
+                                'the color and orientation\n'
+                                'of the middle gabor.'
+                                '\n\n\n'
+                                '[Press right arrow key\nto continue]\n\n')
+
+        utils.draw_instructions(self.win, this_instruction_string, keys = self.settings['keys']['right_index'])
+
+        # draw instructions wait a few seconds
+        this_instruction_string = ('Sometimes, there will only be one shape presented\n'
+                                ' so do not let this confuse you.\n'
+                                '\n\n\n'
+                                '[Press right arrow key\nto continue]\n\n')
+
+        utils.draw_instructions(self.win, this_instruction_string, keys = self.settings['keys']['right_index'])
+
+        # draw instructions wait a few seconds
+        this_instruction_string = ('Do NOT look at the shapes!\n'
+                                    'Please fixate at the center,\n'
+                                    'and do not move your eyes\n'
+                                    '\n\n\n'
+                                    '[Press right arrow key\nto continue]\n\n')
+
+        utils.draw_instructions(self.win, this_instruction_string, keys = self.settings['keys']['right_index'])
+
+        # draw instructions wait a few seconds
+        this_instruction_string = ('\n\n\n\n'
+                                '\n\n\n\nReady?\n'
+                                '[Press space bar\nto start]\n\n')
+
+        utils.draw_instructions(self.win, this_instruction_string, keys = ['space'], 
                                 image_path = [op.join(os.getcwd(),'instructions_imgs','crowding_keys.png')])
             
 
