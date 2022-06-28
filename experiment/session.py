@@ -660,7 +660,6 @@ class CrowdingSession(ExpSession):
         self.total_responses = 0
         self.correct_responses = 0
         self.trial_counter = 0
-        self.thisResp = []
 
         # number of trials per condition
         num_cond_trials = {}
@@ -1010,7 +1009,6 @@ class TrainCrowdingSession(CrowdingSession):
         self.total_responses = 0
         self.correct_responses = 0
         self.trial_counter = 0
-        self.thisResp = []
         self.feedback_response = []
 
         # number of trials per condition

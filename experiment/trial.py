@@ -399,7 +399,7 @@ class CrowdingTrial(Trial):
                                     self.session.distance_ratio_bounds[0], 
                                     self.session.distance_ratio_bounds[1])
                 else:
-                    spacing_val = np.clip(self.session.staircases[self.trial_dict['crowding_type']]._nextIntensity,
+                    spacing_val = np.clip(self.session.staircases[self.trial_dict['crowding_type']].intensities[-1], #_nextIntensity,
                                     self.session.distance_ratio_bounds[0], 
                                     self.session.distance_ratio_bounds[1]) 
 
@@ -408,13 +408,14 @@ class CrowdingTrial(Trial):
                                         trial_dict = self.trial_dict,
                                         spacing_val = spacing_val)
 
-        elif self.phase_names[int(self.phase)] == 'iti': # iti
+        elif (self.phase_names[int(self.phase)] == 'iti') and (self.phase_names[int(self.phase - 1)] != 'block_start'): # iti
             
             if self.session.trial_counter <= self.ID: # if no response was given before
 
-                user_response = 0
                 if self.trial_dict['crowding_type'] != 'unflankered':
                     # update staircase
+                    print('wrong answer')
+                    user_response = 0
                     self.session.staircases[self.trial_dict['crowding_type']].addResponse(user_response)
 
                 self.session.trial_counter += 1 # update trial counter 
@@ -452,20 +453,16 @@ class CrowdingTrial(Trial):
                                 user_response = utils.get_response4staircase(event_key = ev, 
                                                                         target_key = self.session.settings['keys']['target_key'][self.trial_dict['target_name']])
 
-                                self.session.thisResp.append(user_response)
                                 self.session.correct_responses += user_response
 
-                                # update color with answer
-                                if len(self.session.thisResp) > 0: # update with answer
-                                    if self.trial_dict['crowding_type'] != 'unflankered':
-                                        # update staircase
-                                        self.session.staircases[self.trial_dict['crowding_type']].addResponse(self.session.thisResp[-1])
-                                    # reset response again
-                                    self.session.thisResp = []
+                                # update staircase with answer
+                                if self.trial_dict['crowding_type'] != 'unflankered':
+                                    # update staircase
+                                    self.session.staircases[self.trial_dict['crowding_type']].addResponse(user_response)
 
                                 self.session.trial_counter += 1 # update trial counter   
 
-                            self.stop_phase()
+                                self.stop_phase()
 
                 # log everything into session data frame
                 idx = self.session.global_log.shape[0]
@@ -546,7 +543,7 @@ class TrainCrowdingTrial(Trial):
                                     self.session.distance_ratio_bounds[0], 
                                     self.session.distance_ratio_bounds[1])
                 else:
-                    spacing_val = np.clip(self.session.staircases[self.trial_dict['crowding_type']]._nextIntensity,
+                    spacing_val = np.clip(self.session.staircases[self.trial_dict['crowding_type']].intensities[-1], #._nextIntensity,
                                     self.session.distance_ratio_bounds[0], 
                                     self.session.distance_ratio_bounds[1]) 
 
@@ -625,22 +622,18 @@ class TrainCrowdingTrial(Trial):
                                 user_response = utils.get_response4staircase(event_key = ev, 
                                                                         target_key = self.session.settings['keys']['target_key'][self.trial_dict['target_name']])
 
-                                self.session.thisResp.append(user_response)
                                 self.session.correct_responses += user_response
 
                                 self.session.feedback_response.append(user_response) # append response to then give feedback during ITI
 
-                                # update color with answer
-                                if len(self.session.thisResp) > 0: # update with answer
-                                    if self.trial_dict['crowding_type'] != 'unflankered':
-                                        # update staircase
-                                        self.session.staircases[self.trial_dict['crowding_type']].addResponse(self.session.thisResp[-1])
-                                    # reset response again
-                                    self.session.thisResp = []
+                                # update staircase with answer
+                                if self.trial_dict['crowding_type'] != 'unflankered':
+                                    # update staircase
+                                    self.session.staircases[self.trial_dict['crowding_type']].addResponse(user_response)
 
                                 self.session.trial_counter += 1 # update trial counter   
 
-                            self.stop_phase()
+                                self.stop_phase()
 
                 # log everything into session data frame
                 idx = self.session.global_log.shape[0]
