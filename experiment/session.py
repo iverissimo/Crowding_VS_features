@@ -4,7 +4,7 @@ import numpy as np
 
 from exptools2.core import Session, PylinkEyetrackerSession
 
-from trial import VsearchTrial, CrowdingTrial, TrainCrowdingTrial
+from trial import VsearchTrial, CrowdingTrial, TrainCrowdingTrial, TrainVsearchTrial
 from stim import VsearchStim, CrowdingStim 
 
 from psychopy import visual, tools
@@ -329,10 +329,10 @@ class VsearchSession(ExpSession):
         utils.draw_instructions(self.win, this_instruction_string, keys = self.settings['keys']['right_index'])
 
         # draw instructions wait a few seconds
-        this_instruction_string = ('You can move your eyes around'
-                                'to search for your target.\n\n'
+        this_instruction_string = ('You can move your eyes around '
+                                'to search for your target.\n'
                                 'Please return to the fixation cross at the end of each trial.\n'
-                                '\n\n\nReady?\n'
+                                '\n\n\nReady?\n\n'
                                 '[Press right arrow key\nto continue]\n\n')
 
         utils.draw_instructions(self.win, this_instruction_string, keys = self.settings['keys']['right_index'])
@@ -354,7 +354,257 @@ class VsearchSession(ExpSession):
 
         self.close() # close session
 
+
+class TrainVsearchSession(VsearchSession):
+   
+    def __init__(self, output_str, output_dir, settings_file, eyetracker_on):  # initialize child class
+
+        """ Initializes TrainVsearchSession object. 
+      
+        Parameters
+        ----------
+        output_str : str
+            Basename for all output-files (like logs), e.g., "sub-01_task-PRFstandard_run-1"
+        output_dir : str
+            Path to desired output-directory (default: None, which results in $pwd/logs)
+        settings_file : str
+            Path to yaml-file with settings (default: None, which results in the package's
+            default settings file (in data/default_settings.yml)
+        """
+
+        # need to initialize parent class (ExpSession), indicating output infos
+        super().__init__(output_str = output_str, output_dir = output_dir, settings_file = settings_file, 
+                        eyetracker_on = eyetracker_on)
+
+        # some new settings for the training session
+        self.train_num_trl_cond = 2 # number of unique trials
+        self.feedback_time = .5 # amount of time to shouw feedback
+
+
+    def create_trials(self):
+
+        """ Creates trials (before running the session) """
+
+        # some counters for internal bookeeping
+        self.total_responses = 0
+        self.correct_responses = 0
+        self.gaze_sampleCount = 0
+        self.feedback_response = []
+        # radius around fixation (in pix), to check for gaze during iti  
+        self.maxDist = 1/utils.dva_per_pix(height_cm = self.settings['monitor_extra']['height'], 
+                                                distance_cm = self.settings['monitor']['distance'], 
+                                                vert_res_pix = self.screen[-1])
+
+        # target names
+        self.target_names = np.array([k for k in self.settings['visual_search']['target_names'].keys()])
+        # number of ecc for target
+        num_ecc = self.settings['visual_search']['num_ecc']
+        # set size to be displayed
+        set_size = self.settings['visual_search']['set_size']
+        # number of trials per target type
+        num_cond_trials = self.train_num_trl_cond * len(num_ecc) * len(set_size)
+
+        # make df with trial info, 
+        # also including target and distractor positions on screen
+        total_trials = 0
+        trials_df = pd.DataFrame(columns = ['index', 'block' ,'set_size', 'target_name','target_ecc', 'target_pos', 
+                                            'target_color', 'target_ori', 'target_dot', 'target_dot_pos',
+                                            'distractor_name', 'distractor_ecc', 'distractor_pos',
+                                            'distractor_color', 'distractor_ori', 'distractor_dot', 'distractor_dot_pos'])
+
+        # in each block, target is different
+        # but randomize across participants
+        self.blk_targets = self.target_names.copy()
+        np.random.shuffle(self.blk_targets)
+
+        for blk, name in enumerate(self.blk_targets):
+
+            condition = list(np.tile(name, num_cond_trials))
+            condition_ecc = list(np.repeat(num_ecc, num_cond_trials/len(num_ecc)))
+            condition_set_size = list(np.tile(set_size, int(num_cond_trials/len(set_size))))
+
+            total_trials += len(condition)
+
+            print('Number of trials for block %i: %i'%(blk,len(condition)))
+
+            # randomize trials
+            random_ind = np.arange(len(condition))
+            np.random.shuffle(random_ind)
+            
+            for trial_num, i in enumerate(random_ind):
+
+                # randomly select the position for target
+                target_pos_ind = random.choice(np.where(self.grid_ecc == condition_ecc[i])[0])
+                
+                # and for distractors
+                distractor_pos_ind = random.sample([val for val in np.arange(len(self.grid_ecc)) if val != target_pos_ind],
+                                                condition_set_size[i]-1)
+
+                # randomly select in which side task dot will be
+                # relative to target 
+                target_dot = [random.choice(['L','R'])]
+                target_dot_pos = self.grid_pos[target_pos_ind].copy()
+                
+                if target_dot[0] == 'R':
+                    target_dot_pos[0] += self.size_pix/2 * self.settings['visual_search']['task_dot_dist']
+                else: 
+                    target_dot_pos[0] -= self.size_pix/2 * self.settings['visual_search']['task_dot_dist']
+                    
+                # and to distractors
+                distractor_dot_pos = self.grid_pos[distractor_pos_ind].copy()
+                distractor_dot = []
+                for w in range(condition_set_size[i]-1):
+                    
+                    distractor_dot.append(random.choice(['L','R']))
+                    
+                    if distractor_dot[w] == 'R':
+                        distractor_dot_pos[w][0] += self.size_pix/2 * self.settings['visual_search']['task_dot_dist']
+                    else: 
+                        distractor_dot_pos[w][0] -= self.size_pix/2 * self.settings['visual_search']['task_dot_dist']
+                
+                
+                # get distractor names
+                dist_name = np.repeat([n for n in self.target_names if n != condition[i]], 
+                                    int((condition_set_size[i]-1)/(len(self.target_names)-1)))
+                
+                
+                trials_df = trials_df.append(pd.DataFrame({'index': [trial_num],
+                                                        'block': [blk],
+                                                        'set_size': [condition_set_size[i]],
+                                                        'target_name': [condition[i]],
+                                                        'target_ecc': [condition_ecc[i]], 
+                                                        'target_pos': [self.grid_pos[target_pos_ind]], 
+                                                        'target_color': [self.colors_dict[condition[i]]],
+                                                        'target_ori': [self.ori_dict[condition[i]]],
+                                                        'target_dot': [target_dot], 
+                                                        'target_dot_pos': [target_dot_pos],
+                                                        'distractor_name': [dist_name],
+                                                        'distractor_ecc': [self.grid_ecc[distractor_pos_ind]],
+                                                        'distractor_pos': [self.grid_pos[distractor_pos_ind]],
+                                                        'distractor_color': [[self.colors_dict[v] for v in dist_name]], 
+                                                        'distractor_ori': [[self.ori_dict[v] for v in dist_name]],
+                                                        'distractor_dot': [distractor_dot], 
+                                                        'distractor_dot_pos': [distractor_dot_pos]
+                                                    }))
+
+        self.total_trials = total_trials
+        print('Total number of trials per block: %i'%self.total_trials)
+
+        ## save dataframe with all trial info
+        trials_df.to_csv(op.join(self.output_dir, self.output_str+'_trial_info.csv'), index = False)
+
+
+        # append all trials
+        self.all_trials = []
+        self.acc_feedback_trials = [] # to append trial numbers for which to give feedback
+        for blk in trials_df['block'].unique():
+
+            blk_df = trials_df.loc[trials_df['block']==blk]
     
+            for i in np.arange(len(blk_df)):
+
+                # set phase conditions (for logging) and durations
+            
+                if  i == 0:
+                    # insert block phase, to pause trials for a bit
+                    # and maybe recalibration of eyetracker
+                    phase_cond = tuple(['block_start', 'iti', 'stim', 'feeback' ,'iti'])
+                    phase_dur = tuple([self.settings['visual_search']['max_iti']*100, # make this extremely long
+                                    self.settings['visual_search']['max_iti'], 
+                                    self.settings['visual_search']['max_display_time'],
+                                    self.feedback_time,
+                                    self.settings['visual_search']['max_iti'] - self.feedback_time
+                                    ])
+
+                elif i == (len(blk_df) - 1): # if last trial of block, show accuracy score (so we need more time)
+                    phase_cond = tuple(['stim', 'feeback', 'iti'])
+                    phase_dur = tuple([self.settings['visual_search']['max_display_time'],
+                                    self.feedback_time,
+                                    self.settings['visual_search']['max_iti'] * 2 - self.feedback_time
+                                    ])
+
+                    self.acc_feedback_trials.append(blk_df.iloc[i]['index'])
+
+                else:
+                    phase_cond = tuple(['stim', 'feeback', 'iti'])
+                    phase_dur = tuple([self.settings['visual_search']['max_display_time'],
+                                    self.feedback_time,
+                                    self.settings['visual_search']['max_iti'] - self.feedback_time
+                                    ])
+
+                self.all_trials.append(TrainVsearchTrial(session = self ,
+                                                    trial_nr = blk_df.iloc[i]['index'],
+                                                    phase_durations = phase_dur,
+                                                    phase_names = phase_cond,
+                                                    trial_dict = blk_df.iloc[i].to_dict(),
+                                                    blk_nr = blk
+                                                    ))
+
+    def run(self):
+        """ Loops over trials and runs them """
+
+        # create trials before running!
+        self.create_stimuli()
+        self.create_trials()
+
+        # if eyetracking then calibrate
+        if self.eyetracker_on:
+            self.calibrate_eyetracker()
+
+        # draw instructions wait a few seconds
+        this_instruction_string = ('During the experiment you will see several striped shapes.\n'
+                                'They can be pink or blue,\n'
+                                'and be tilted to the right or left'
+                                '\n\n\n'
+                                '[Press right arrow key\nto continue]\n\n')
+
+        utils.draw_instructions(self.win, this_instruction_string, keys = self.settings['keys']['right_index'])
+
+        # draw instructions wait a few seconds
+        this_instruction_string = ('Each of them will have a small grey dot.\n'
+                                'On the center-right or center-left side'
+                                '\n\n\n'
+                                '[Press right arrow key\nto continue]\n\n')
+
+        utils.draw_instructions(self.win, this_instruction_string, keys = self.settings['keys']['right_index'])
+
+        # draw instructions wait a few seconds
+        this_instruction_string = ('Your task is to find\nthe UNIQUE shape\n'
+                                'and indicate on which side the tiny dot is'
+                                '\n\n\n'
+                                '[Press right arrow key\nto continue]\n\n')
+
+        utils.draw_instructions(self.win, this_instruction_string, keys = self.settings['keys']['right_index'])
+
+        # draw instructions wait a few seconds
+        this_instruction_string = ('You can move your eyes around '
+                                'to search for your target.\n\n'
+                                'Please return to the fixation cross at the end of each trial.\n'
+                                '\n\n\nReady?\n\n'
+                                '[Press right arrow key\nto continue]\n\n')
+
+        utils.draw_instructions(self.win, this_instruction_string, keys = self.settings['keys']['right_index'])
+
+        # start recording gaze
+        if self.eyetracker_on:
+            self.start_recording_eyetracker()
+
+        self.start_experiment()
+        
+        # cycle through trials
+        for trl in self.all_trials: 
+            trl.run() # run forrest run
+
+        print('Expected number of responses: %d'%(self.total_trials))
+        print('Total subject responses: %d'%self.total_responses)
+        print('Correct responses: %d'%self.correct_responses)
+        print('Overall accuracy %.2f %%'%(self.correct_responses/self.total_trials*100))
+
+        self.close() # close session
+
+
+
+
 class CrowdingSession(ExpSession):
    
     def __init__(self, output_str, output_dir, settings_file, eyetracker_on):  # initialize child class
@@ -696,8 +946,8 @@ class CrowdingSession(ExpSession):
 
         # draw instructions wait a few seconds
         this_instruction_string = ('\n\n\n\n'
-                                '\n\n\n\nReady?\n'
-                                '[Press space bar\nto start]\n\n')
+                                '\n\n\n\nReady?\n\n'
+                                '[Press space bar to start]\n\n')
 
         utils.draw_instructions(self.win, this_instruction_string, keys = ['space'], 
                                 image_path = [op.join(os.getcwd(),'instructions_imgs','crowding_keys.png')])
@@ -987,8 +1237,8 @@ class TrainCrowdingSession(CrowdingSession):
 
         # draw instructions wait a few seconds
         this_instruction_string = ('\n\n\n\n'
-                                '\n\n\n\nReady?\n'
-                                '[Press space bar\nto start]\n\n')
+                                '\n\n\n\nReady?\n\n'
+                                '[Press space bar to start]\n\n')
 
         utils.draw_instructions(self.win, this_instruction_string, keys = ['space'], 
                                 image_path = [op.join(os.getcwd(),'instructions_imgs','crowding_keys.png')])

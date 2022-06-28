@@ -5,7 +5,7 @@ cd "C:\Users\crowding_search_2\Desktop\LocalPC-EXP\Experiment\Crowding_VS_featur
 
 set /p SJ_NUM=Participant number? (ex: 1):
 
-set /p SES=Session type? (ex: practice, real):
+set /p SES=Session type? (ex: train, test):
 
 echo "Running participant %SJ_NUM%, session type %SES%"
 

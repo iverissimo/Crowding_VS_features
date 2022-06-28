@@ -3,7 +3,7 @@ import sys
 import os
 import os.path as op
 #import appnope
-from session import VsearchSession, CrowdingSession, TrainCrowdingSession 
+from session import VsearchSession, CrowdingSession, TrainCrowdingSession, TrainVsearchSession 
 
 
 # define main function
@@ -22,6 +22,12 @@ def main():
     
     sj_num = str(sys.argv[1]).zfill(3) # subject number
     ses_type = str(sys.argv[2]) # run number
+
+    if ses_type not in ['train','test']:
+        print('session type not accepted')
+        ses_type = ''
+        while ses_type not in ('train','test'):
+            ses_type = input('Which session type to run (train/test)?: ')
 
     # task name dictionary
     tasks = {'search': 'VisualSearch', 'crowding': 'Crowding'}
@@ -63,25 +69,33 @@ def main():
     #
     if exp_type == 'search': # run visual search task
 
-        exp_sess = VsearchSession(output_str = output_str,
-                              output_dir = output_dir,
-                              settings_file = 'experiment_settings.yml',
-                              eyetracker_on = True) #False) #True)
+        if ses_type == 'train': # short practice ses, to understand task
+
+            exp_sess = TrainVsearchSession(output_str = output_str,
+                                  output_dir = output_dir,
+                                  settings_file = 'experiment_settings.yml',
+                                  eyetracker_on = False) #False) #True)
+        
+        else: # real deal
+            exp_sess = VsearchSession(output_str = output_str,
+                                output_dir = output_dir,
+                                settings_file = 'experiment_settings.yml',
+                                eyetracker_on = False) #False) #True)
 
     elif exp_type == 'crowding': # run crowding task
         
-        if ses_type in ['practice', 'train']: # short practice ses, to understand task
+        if ses_type == 'train': # short practice ses, to understand task
 
             exp_sess = TrainCrowdingSession(output_str = output_str,
                                   output_dir = output_dir,
                                   settings_file = 'experiment_settings.yml',
-                                  eyetracker_on = True) #False) #True)
+                                  eyetracker_on = False) #False) #True)
         
         else: # real deal
             exp_sess = CrowdingSession(output_str = output_str,
                                     output_dir = output_dir,
                                     settings_file = 'experiment_settings.yml',
-                                    eyetracker_on = True) #False) #True)
+                                    eyetracker_on = False) #False) #True)
 
    	                            
     exp_sess.run()

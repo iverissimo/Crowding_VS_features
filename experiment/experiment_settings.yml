@@ -8,7 +8,7 @@ window: # refers to the parameters for the Psychopy Window class
   units: pix
   color: [0, 0, 0] # psychopy rgb
   fullscr: True
-  screen: 1 #0 #1
+  screen: 0 #0 #1
   winType: 'pyglet'
   waitBlanking: True
   colorSpace: 'rgb' #'hsv' #'rgb255'

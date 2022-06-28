@@ -54,6 +54,10 @@ class VsearchTrial(Trial):
 
         if self.phase_names[int(self.phase)] == 'block_start':
 
+            if (self.blk_nr != 0) and (self.session.eyetracker_on): # if tracking and block not block 1
+                # calibrate again
+                self.session.calibrate_eyetracker()
+
             # show instructions
             this_instruction_string = ('BLOCK %i\n\n'
                                         'Search for\n\n\n\n\n\n\n\n'
@@ -152,6 +156,178 @@ class VsearchTrial(Trial):
                     self.session.global_log.loc[idx, param] = val
 
 
+class TrainVsearchTrial(VsearchTrial):
+
+    def __init__(self, session, trial_nr, phase_durations, phase_names, trial_dict, blk_nr,
+                 timing = 'seconds', *args, **kwargs):
+
+
+        """ Initializes a VsearchTrial object. 
+        Parameters
+        ----------
+        session : exptools Session object
+            A Session object (needed for metadata)
+        trial_nr: int
+            Trial nr of trial
+        timing : str
+            The "units" of the phase durations. Default is 'seconds', where we
+            assume the phase-durations are in seconds. The other option is
+            'frames', where the phase-"duration" refers to the number of frames.
+        """
+        
+        self.ID = trial_nr # trial identifier, not sure if needed
+        self.session = session
+
+        # phase durations for each condition 
+        self.phase_durations = phase_durations
+        self.phase_names = phase_names
+
+        # trial dictionary with relevant info
+        self.trial_dict = trial_dict
+        self.blk_nr = blk_nr
+
+        super().__init__(session, trial_nr, phase_durations, phase_names, trial_dict, blk_nr, timing = 'seconds', *args, **kwargs)
+
+
+    def draw(self): 
+
+        """ Draw stimuli - pRF bars - for each trial """
+        
+        current_time = self.session.clock.getTime() # get time
+
+        if self.phase_names[int(self.phase)] == 'block_start':
+
+            # show instructions
+            this_instruction_string = ('BLOCK %i\n\n'
+                                        'Search for\n\n\n\n\n\n\n\n'
+                                '\n\n[Press space bar to start]\n\n'%((self.blk_nr + 1)))
+
+            block_text = visual.TextStim(win = self.session.win, text = this_instruction_string,
+                        color = (1, 1, 1), font = 'Helvetica Neue', pos = (0, 0), height = 40,
+                        italic = True, anchorHoriz = 'center', anchorVert = 'center')
+    
+            # draw text
+            block_text.draw()
+
+            img_stim = visual.ImageStim(win = self.session.win, 
+                                   image = op.join(os.getcwd(),'instructions_imgs','VS_keys_%s.png'%self.session.blk_targets[self.blk_nr]),
+                                   pos = (0, 0))
+            img_stim.draw()
+
+        elif self.phase_names[int(self.phase)] == 'stim': 
+
+            # draw target and distractors
+            self.session.vs_stim.draw(this_phase = self.phase_names[int(self.phase)],
+                                    trial_dict = self.trial_dict)
+
+        elif self.phase_names[int(self.phase)] == 'iti': # ITI period 
+
+            if self.ID == int(self.session.acc_feedback_trials[self.blk_nr]): # if last trial of the block
+
+                this_instruction_string = ('Accuracy is %.2f%%\n\n\n\n'%(self.session.correct_responses/(self.ID * (self.blk_nr + 1))*100))
+
+                acc_text = visual.TextStim(win = self.session.win, text = this_instruction_string,
+                        color = (1, 1, 1), font = 'Helvetica Neue', pos = (0, 0), height = 40,
+                        italic = True, anchorHoriz = 'center', anchorVert = 'center')
+
+                # draw text again
+                acc_text.draw()
+
+            else:
+                if self.session.eyetracker_on: # if we have eyetracker
+
+                    # get current gaze
+                    curr_gaze = utils.getCurSamp(self.session.tracker, screen = self.session.screen)
+                    # calculate distance to center of screen
+                    dist2center = utils.distBetweenPoints(curr_gaze, (0, 0))
+
+                    # Check if sample is within boundary
+                    if dist2center < self.session.maxDist:
+                        self.session.gaze_sampleCount += 1
+
+                    # If enough samples within boundary
+                    if self.session.gaze_sampleCount >= 200:
+                        print('correctFixation')
+                        self.session.gaze_sampleCount = 0
+                        self.stop_phase()
+
+        elif self.phase_names[int(self.phase)] == 'feeback': # if its a feedback period
+
+            if len(self.session.feedback_response) <= self.ID: # if no response given, then also wrong
+                self.session.feedback_response.append(False)
+
+            if self.session.feedback_response[-1]: # if last response was correct
+                self.session.fixation.lineColor = [-1, 1, -1] # turn green
+            else:
+                self.session.fixation.lineColor = [1, -1, -1] # turn red (response incorrect)
+
+        
+        if self.phase_names[int(self.phase)] != 'feeback': # for all phases that not feedback, add normal fixation color
+            # set color of fixation cross as white again
+            self.session.fixation.lineColor = [1, 1, 1]
+
+        ## fixation cross
+        self.session.fixation.draw() 
+
+        #print(self.phase_names[int(self.phase)])
+
+
+    def get_events(self):
+        """ Logs responses/triggers """
+        for ev, t in event.getKeys(timeStamped=self.session.clock): # list of of (keyname, time) relative to Clock’s last reset
+            if len(ev) > 0:
+                if ev in ['q']:
+                    print('trial canceled by user')  
+                    self.session.close()
+                    self.session.quit()
+
+                elif (ev in ['space']) and (self.phase_names[int(self.phase)] == 'block_start'): # new block starts
+                    event_type = 'block_start'
+                    self.stop_phase()
+
+                else:
+                    event_type = 'response'
+
+                    if (ev in np.concatenate((self.session.settings['keys']['left_index'], self.session.settings['keys']['right_index']))) and \
+                        (self.phase_names[int(self.phase)] == 'stim'): # stim presentation
+
+                        self.session.total_responses += 1
+
+                        if (ev in self.session.settings['keys']['left_index']) and \
+                            (self.trial_dict['target_dot'][0] == 'L'):
+
+                            self.session.correct_responses += 1
+                            print('correct answer')
+                            self.session.feedback_response.append(True)
+
+                        elif (ev in self.session.settings['keys']['right_index']) and \
+                            (self.trial_dict['target_dot'][0] == 'R'):
+
+                            self.session.correct_responses += 1
+                            print('correct answer')
+                            self.session.feedback_response.append(True)
+
+                        else:
+                            print('wrong answer')
+                            self.session.feedback_response.append(False)
+                        
+                        self.stop_phase()
+                    
+
+                # log everything into session data frame
+                idx = self.session.global_log.shape[0]
+                self.session.global_log.loc[idx, 'trial_nr'] = self.ID
+                self.session.global_log.loc[idx, 'onset'] = t
+                self.session.global_log.loc[idx, 'event_type'] = event_type
+                self.session.global_log.loc[idx, 'phase'] = self.phase
+                self.session.global_log.loc[idx, 'response'] = ev                
+
+                for param, val in self.parameters.items():
+                    self.session.global_log.loc[idx, param] = val
+
+
+
+
 class CrowdingTrial(Trial):
 
     def __init__(self, session, trial_nr, phase_durations, phase_names, trial_dict, blk_counter = 0,
@@ -200,6 +376,10 @@ class CrowdingTrial(Trial):
             else:
                 this_instruction_string = ('BLOCK %i\n\n\n\n\n\n'
                                     '[Press space bar to start]\n\n'%(self.blk_counter + 1))
+
+                if self.session.eyetracker_on: # if tracking and block not block 1
+                    # calibrate again
+                    self.session.calibrate_eyetracker()
 
             block_text = visual.TextStim(win = self.session.win, text = this_instruction_string,
                         color = (1, 1, 1), font = 'Helvetica Neue', pos = (0, 0), height = 40,
