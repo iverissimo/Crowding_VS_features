@@ -54,10 +54,6 @@ class VsearchTrial(Trial):
 
         if self.phase_names[int(self.phase)] == 'block_start':
 
-            if (self.blk_nr != 0) and (self.session.eyetracker_on): # if tracking and block not block 1
-                # calibrate again
-                self.session.calibrate_eyetracker()
-
             # show instructions
             this_instruction_string = ('BLOCK %i\n\n'
                                         'Search for\n\n\n\n\n\n\n\n'
@@ -113,6 +109,10 @@ class VsearchTrial(Trial):
                     print('trial canceled by user')  
                     self.session.close()
                     self.session.quit()
+
+                elif  (ev in ['c']) and (self.session.eyetracker_on): # if tracking and block not block 1
+                    # calibrate again
+                    self.session.calibrate_eyetracker()
 
                 elif (ev in ['space']) and (self.phase_names[int(self.phase)] == 'block_start'): # new block starts
                     event_type = 'block_start'
