@@ -111,6 +111,7 @@ class VsearchTrial(Trial):
                     self.session.quit()
 
                 elif  (ev in ['c']) and (self.session.eyetracker_on) and (self.phase_names[int(self.phase)] == 'block_start'): # if tracking and block start
+                    event_type = 'calibration'
                     # calibrate again
                     self.session.calibrate_eyetracker()
 
@@ -432,6 +433,7 @@ class CrowdingTrial(Trial):
                     self.session.quit()
 
                 elif  (ev in ['c']) and (self.session.eyetracker_on) and (self.phase_names[int(self.phase)] == 'block_start'): # if tracking and block start
+                    event_type = 'calibration'
                     # calibrate again
                     self.session.calibrate_eyetracker()
 
