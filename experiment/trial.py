@@ -110,7 +110,7 @@ class VsearchTrial(Trial):
                     self.session.close()
                     self.session.quit()
 
-                elif  (ev in ['c']) and (self.session.eyetracker_on): # if tracking and block not block 1
+                elif  (ev in ['c']) and (self.session.eyetracker_on) and (self.phase_names[int(self.phase)] == 'block_start'): # if tracking and block start
                     # calibrate again
                     self.session.calibrate_eyetracker()
 
@@ -377,10 +377,6 @@ class CrowdingTrial(Trial):
                 this_instruction_string = ('BLOCK %i\n\n\n\n\n\n'
                                     '[Press space bar to start]\n\n'%(self.blk_counter + 1))
 
-                if self.session.eyetracker_on: # if tracking and block not block 1
-                    # calibrate again
-                    self.session.calibrate_eyetracker()
-
             block_text = visual.TextStim(win = self.session.win, text = this_instruction_string,
                         color = (1, 1, 1), font = 'Helvetica Neue', pos = (0, 0), height = 40,
                         italic = True, anchorHoriz = 'center', anchorVert = 'center')
@@ -434,6 +430,10 @@ class CrowdingTrial(Trial):
                     print('trial canceled by user')  
                     self.session.close_all()
                     self.session.quit()
+
+                elif  (ev in ['c']) and (self.session.eyetracker_on) and (self.phase_names[int(self.phase)] == 'block_start'): # if tracking and block start
+                    # calibrate again
+                    self.session.calibrate_eyetracker()
 
                 elif (ev in ['space']) and (self.phase_names[int(self.phase)] == 'block_start'): # new block starts
                     event_type = 'block_start'

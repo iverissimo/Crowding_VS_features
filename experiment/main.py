@@ -4,6 +4,7 @@ import os
 import os.path as op
 #import appnope
 from session import VsearchSession, CrowdingSession, TrainCrowdingSession, TrainVsearchSession 
+import yaml
 
 
 # define main function
@@ -40,9 +41,16 @@ def main():
 
     print('Running %s task for subject-%s, ses-%s'%(exp_type, sj_num, ses_type))
 
+    # load settings from yaml
+    with open(op.join(os.getcwd(),'experiment_settings.yml'), 'r') as f_in:
+        params = yaml.safe_load(f_in)
+    
     # make output dir
-    base_dir = op.split(os.getcwd())[0] # main path for all folders of project
-    output_dir = op.join(base_dir,'output','sourcedata', 'sub-{sj}'.format(sj=sj_num))
+    if params['paths']['curr_dir'] == 'lab':
+        output_dir = op.join(params['paths']['data_pth']['lab'], 'output','sourcedata', 'sub-{sj}'.format(sj=sj_num))
+    else:
+        base_dir = op.split(os.getcwd())[0] # main path for all folders of project
+        output_dir = op.join(base_dir,'output','sourcedata', 'sub-{sj}'.format(sj=sj_num))
 
     # if output path doesn't exist, create it
     if not op.isdir(output_dir): 
