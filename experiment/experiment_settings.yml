@@ -57,7 +57,7 @@ stimuli:
   sd: .12 # standard deviation
   
   ori_deg: 5 # orientation in degrees
-  cond_colors: {'blue': [103, 110, 229], 'pink': [155, 81, 234]} # # rgb255 
+  cond_colors: {'blue': [0, 96, 209], 'pink': [164, 35, 220]} # # rgb255 
 
 
 keys: # keys to press, valid for laptop, scanner and behav lab
