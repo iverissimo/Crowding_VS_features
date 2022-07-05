@@ -115,7 +115,7 @@ class VsearchTrial(Trial):
                     # calibrate again
                     self.session.calibrate_eyetracker()
                     # re start recording
-                    self.start_recording_eyetracker()
+                    self.session.start_recording_eyetracker()
 
                 elif (ev in ['space']) and (self.phase_names[int(self.phase)] == 'block_start'): # new block starts
                     event_type = 'block_start'
@@ -439,7 +439,7 @@ class CrowdingTrial(Trial):
                     # calibrate again
                     self.session.calibrate_eyetracker()
                     # re start recording
-                    self.start_recording_eyetracker()
+                    self.session.start_recording_eyetracker()
 
                 elif (ev in ['space']) and (self.phase_names[int(self.phase)] == 'block_start'): # new block starts
                     event_type = 'block_start'
