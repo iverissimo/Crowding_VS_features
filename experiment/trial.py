@@ -114,6 +114,8 @@ class VsearchTrial(Trial):
                     event_type = 'calibration'
                     # calibrate again
                     self.session.calibrate_eyetracker()
+                    # re start recording
+                    self.start_recording_eyetracker()
 
                 elif (ev in ['space']) and (self.phase_names[int(self.phase)] == 'block_start'): # new block starts
                     event_type = 'block_start'
@@ -225,7 +227,7 @@ class TrainVsearchTrial(VsearchTrial):
 
             if self.ID == int(self.session.acc_feedback_trials[self.blk_nr]): # if last trial of the block
 
-                this_instruction_string = ('Accuracy is %.2f%%\n\n\n\n'%(self.session.correct_responses/(self.ID * (self.blk_nr + 1))*100))
+                this_instruction_string = ('Accuracy is %.2f%%\n\n\n\n'%(self.session.correct_responses/(self.session.acc_feedback_trials[self.blk_nr])*100))
 
                 acc_text = visual.TextStim(win = self.session.win, text = this_instruction_string,
                         color = (1, 1, 1), font = 'Helvetica Neue', pos = (0, 0), height = 40,
@@ -252,7 +254,7 @@ class TrainVsearchTrial(VsearchTrial):
                         self.session.gaze_sampleCount = 0
                         self.stop_phase()
 
-        elif self.phase_names[int(self.phase)] == 'feeback': # if its a feedback period
+        elif self.phase_names[int(self.phase)] == 'feedback': # if its a feedback period
 
             if len(self.session.feedback_response) <= self.ID: # if no response given, then also wrong
                 self.session.feedback_response.append(False)
@@ -263,7 +265,7 @@ class TrainVsearchTrial(VsearchTrial):
                 self.session.fixation.lineColor = [1, -1, -1] # turn red (response incorrect)
 
         
-        if self.phase_names[int(self.phase)] != 'feeback': # for all phases that not feedback, add normal fixation color
+        if self.phase_names[int(self.phase)] != 'feedback': # for all phases that not feedback, add normal fixation color
             # set color of fixation cross as white again
             self.session.fixation.lineColor = [1, 1, 1]
 
@@ -436,6 +438,8 @@ class CrowdingTrial(Trial):
                     event_type = 'calibration'
                     # calibrate again
                     self.session.calibrate_eyetracker()
+                    # re start recording
+                    self.start_recording_eyetracker()
 
                 elif (ev in ['space']) and (self.phase_names[int(self.phase)] == 'block_start'): # new block starts
                     event_type = 'block_start'
@@ -568,7 +572,7 @@ class TrainCrowdingTrial(Trial):
                 acc_text.draw()
 
             
-        elif self.phase_names[int(self.phase)] == 'feeback': # if its a feedback period
+        elif self.phase_names[int(self.phase)] == 'feedback': # if its a feedback period
 
             if self.session.trial_counter <= self.ID: # if no response was given before
 
@@ -587,7 +591,7 @@ class TrainCrowdingTrial(Trial):
                 self.session.fixation.lineColor = [1, -1, -1] # turn red (response incorrect)
 
 
-        if self.phase_names[int(self.phase)] != 'feeback': # for all phases that not feedback, add normal fixation color
+        if self.phase_names[int(self.phase)] != 'feedback': # for all phases that not feedback, add normal fixation color
             # set color of fixation cross as white again
             self.session.fixation.lineColor = [1, 1, 1]
 

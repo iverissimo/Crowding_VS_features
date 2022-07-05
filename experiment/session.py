@@ -508,7 +508,7 @@ class TrainVsearchSession(VsearchSession):
                 if  i == 0:
                     # insert block phase, to pause trials for a bit
                     # and maybe recalibration of eyetracker
-                    phase_cond = tuple(['block_start', 'iti', 'stim', 'feeback' ,'iti'])
+                    phase_cond = tuple(['block_start', 'iti', 'stim', 'feedback' ,'iti'])
                     phase_dur = tuple([self.settings['visual_search']['max_iti']*100, # make this extremely long
                                     self.settings['visual_search']['max_iti'], 
                                     self.settings['visual_search']['max_display_time'],
@@ -517,7 +517,7 @@ class TrainVsearchSession(VsearchSession):
                                     ])
 
                 elif i == (len(blk_df) - 1): # if last trial of block, show accuracy score (so we need more time)
-                    phase_cond = tuple(['stim', 'feeback', 'iti'])
+                    phase_cond = tuple(['stim', 'feedback', 'iti'])
                     phase_dur = tuple([self.settings['visual_search']['max_display_time'],
                                     self.feedback_time,
                                     self.settings['visual_search']['max_iti'] * 2 - self.feedback_time
@@ -526,7 +526,7 @@ class TrainVsearchSession(VsearchSession):
                     self.acc_feedback_trials.append(blk_df.iloc[i]['index'])
 
                 else:
-                    phase_cond = tuple(['stim', 'feeback', 'iti'])
+                    phase_cond = tuple(['stim', 'feedback', 'iti'])
                     phase_dur = tuple([self.settings['visual_search']['max_display_time'],
                                     self.feedback_time,
                                     self.settings['visual_search']['max_iti'] - self.feedback_time
@@ -1138,7 +1138,7 @@ class TrainCrowdingSession(CrowdingSession):
             # set phase conditions (for logging) and durations
             if self.blk_trials[blk_counter] == i:
                 # insert block phase, to pause trials for a bit
-                phase_cond = tuple(['block_start', 'iti', 'stim', 'response_time', 'feeback', 'iti'])
+                phase_cond = tuple(['block_start', 'iti', 'stim', 'response_time', 'feedback', 'iti'])
                 blk_start_dur = self.iti if blk_counter == 0 else 1000 # in first block, we just want to start
 
                 phase_dur = tuple([blk_start_dur, # make this extremely long
@@ -1153,14 +1153,14 @@ class TrainCrowdingSession(CrowdingSession):
                     blk_counter += 1
 
             elif (i > 0) and (i == self.blk_trials[blk_counter] - 1):
-                phase_cond = tuple(['stim','response_time','feeback', 'iti'])
+                phase_cond = tuple(['stim','response_time','feedback', 'iti'])
                 phase_dur = tuple([self.stim_display_time,
                                 self.settings['crowding']['max_resp_time']-self.stim_display_time,
                                 self.feedback_time,
                                 self.iti * 3 - self.feedback_time
                                 ])
             else:
-                phase_cond = tuple(['stim','response_time','feeback', 'iti'])
+                phase_cond = tuple(['stim','response_time','feedback', 'iti'])
                 phase_dur = tuple([self.stim_display_time,
                                 self.settings['crowding']['max_resp_time']-self.stim_display_time,
                                 self.feedback_time,
