@@ -378,7 +378,8 @@ class TrainVsearchSession(VsearchSession):
 
         # some new settings for the training session
         self.train_num_trl_cond = 2 # number of unique trials
-        self.feedback_time = .5 # amount of time to shouw feedback
+        self.feedback_time = .5 # amount of time to show feedback
+        self.acc_feedback_time = 3 # seconds
 
 
     def create_trials(self):
@@ -520,7 +521,7 @@ class TrainVsearchSession(VsearchSession):
                     phase_cond = tuple(['stim', 'feedback', 'iti'])
                     phase_dur = tuple([self.settings['visual_search']['max_display_time'],
                                     self.feedback_time,
-                                    self.settings['visual_search']['max_iti'] * 2 - self.feedback_time
+                                    self.acc_feedback_time - self.feedback_time
                                     ])
 
                     self.acc_feedback_trials.append(blk_df.iloc[i]['index'])
