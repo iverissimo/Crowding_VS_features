@@ -30,6 +30,11 @@ window_extra: # refers to the parameters for the OLD Psychopy Window class (new 
   framerate: 60
   mac_bool: False #True #False
 
+paths:
+  curr_dir: 'local' # 'local'
+  data_pth: {'lab': 'C:\Users\crowding_search_2\Desktop\LocalPC-DATA\',
+            'local': '/Volumes/Verissimo_Seagate_Hub_Plus/Projects/CVS/PILOT_DATA'} 
+
 eyetracker:
   address: '100.1.1.1' #  Eyelink eyetracker IP
   dot_size: 0.15  # in dva
@@ -53,7 +58,7 @@ stimuli:
   sd: .12 # standard deviation
   
   ori_deg: 5 # orientation in degrees
-  cond_colors: {'blue': [105,107,255], 'pink': [200, 105, 255]} # # rgb255 
+  cond_colors: {'blue': [0, 96, 209], 'pink': [164, 35, 220]} # # rgb255 
 
 
 keys: # keys to press, valid for laptop, scanner and behav lab

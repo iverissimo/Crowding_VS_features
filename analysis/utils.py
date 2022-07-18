@@ -761,29 +761,31 @@ def get_accuracy_rt_uncrowded(events_df, trial_info_df, sj = '',
         response_bool = []
         rt_vals = []
         
-        for t in trials: # go throu trials
+        for t in trials: # go through trials
             
             # response df for trial
             r_df = response_df[response_df['trial_nr'] == t]
+
+            # target df
+            t_df = df_unflankered[df_unflankered['index'] == t]
+
+            # get target name for trial
+            target_name = t_df['target_name'].values[0]
+
+            # trial events df
+            trl_ev_df = events_df[(events_df['trial_nr'] == t)]
         
             if key == 'total':
-                
-                # target df
-                t_df = df_unflankered[df_unflankered['index'] == t]
-
                 # if didnt respond or response incorrect
-                if r_df.empty or target_keys[t_df['target_name'].values[0]][0] != r_df['response'].values[0]:
-                    response_bool.append(False)
-                else:
-                    response_bool.append(True)
-                    # append RT
-                    rt_vals.append(r_df['onset'].values[0] - events_df[(events_df['trial_nr'] == t) & \
-                                             (events_df['event_type'] == 'stim')]['onset'].values[0])
+                response_bool.append(False)
+                # else True
+                if not r_df.empty:
+                    if (target_keys[target_name][0] == r_df['response'].values[0]):
+                        response_bool[-1] = True
+                        # append RT
+                        rt_vals.append(r_df['onset'].values[0] - trl_ev_df[trl_ev_df['event_type'] == 'stim']['onset'].values[0])
 
             else:
-                # get target name for trial
-                target_name = df_unflankered[df_unflankered['index'] == t]['target_name'].values[0]
-                
                 # get target names with same color/orientation
                 if key == 'color':
                     t_keys = [l for l in target_keys.keys() if target_name[0] in l]
@@ -791,13 +793,13 @@ def get_accuracy_rt_uncrowded(events_df, trial_info_df, sj = '',
                     t_keys = [l for l in target_keys.keys() if target_name[-1] in l]
 
                 # if didnt respond or response incorrect
-                if r_df.empty or len([True for v in t_keys if r_df['response'].values[0] in target_keys[v]]) == 0:
-                    response_bool.append(False)
-                else:
-                    response_bool.append(True)
-                    # append RT
-                    rt_vals.append(r_df['onset'].values[0] - events_df[(events_df['trial_nr'] == t) & \
-                                             (events_df['event_type'] == 'stim')]['onset'].values[0])
+                response_bool.append(False)
+                # else True
+                if not r_df.empty:
+                    if len([True for v in t_keys if r_df['response'].values[0] in target_keys[v]]) != 0:
+                        response_bool[-1] = True
+                        # append RT
+                        rt_vals.append(r_df['onset'].values[0] - trl_ev_df[trl_ev_df['event_type'] == 'stim']['onset'].values[0])
 
         # append values
         df_acc['type'].append(key)
