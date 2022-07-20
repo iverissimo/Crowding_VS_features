@@ -5,6 +5,8 @@ import pandas as pd
 import seaborn as sns
 import yaml
 
+from ast import literal_eval
+
 class BehResponses:
     
     """Behavioral Responses 
@@ -117,9 +119,85 @@ class BehResponses:
 
         ####### if search task ########
         elif self.dataObj.task_name.lower() == 'visualsearch':
-            print('not implemented yet')
-    
-        
+            
+            # number of blocks in task
+            self.nr_blocks = self.dataObj.trial_info_df['block'].unique()
+
+            # block start onsets 
+            self.blk_start_onsets = self.dataObj.events_df[(self.dataObj.events_df['event_type'] == 'block_start') & \
+                                (self.dataObj.events_df['response'] == 'space')]['onset'].values
+
+            # set up empty df
+            df_manual_responses = pd.DataFrame({'sj': [], 'trial_num': [], 'block_num': [] ,'target_ecc': [], 'set_size': [], 
+                                                'RT': [], 'correct_response': []})
+
+            # loop over blocks
+            for blk in self.nr_blocks:
+
+                # subselect trial info df to only have trials from this block
+                df_blk_info = self.dataObj.trial_info_df[self.dataObj.trial_info_df['block'] == blk]
+
+                ####### doing this as a quick fix - NEED TO CHANGE WAY OF LOADING DF TO NOT LOOSE INFO!! #############
+                df_blk_info.target_dot = df_blk_info.target_dot.apply(literal_eval)
+
+                # and subselect events for this block
+                if blk < self.nr_blocks[-1]:
+                    df_blk_ev = self.dataObj.events_df[(self.dataObj.events_df['onset'] >= self.blk_start_onsets[blk]) &\
+                                        (self.dataObj.events_df['onset'] < self.blk_start_onsets[blk+1])]
+                else:
+                    df_blk_ev = self.dataObj.events_df[(self.dataObj.events_df['onset'] >= self.blk_start_onsets[blk])]
+                    
+                # trial numbers for this blk
+                trials_blk = df_blk_info['index'].values
+
+                # loop over those trials
+                for t in trials_blk:
+
+                    # events df for that trial
+                    ev_df = df_blk_ev[df_blk_ev['trial_nr'] == t] 
+
+                    # if participant responded
+                    if 'response' in ev_df['event_type'].values:
+
+                        # participant response key
+                        response_key = ev_df[ev_df['event_type'] == 'response']['response'].values[0]
+
+                        # if correct response
+                        if response_key[0] == df_blk_info[df_blk_info['index'] == t]['target_dot'].values[0][0].lower():
+                            
+                            correct_response = 1
+                        
+                        # simply incorrect
+                        else:
+                            correct_response = 0
+                            
+                        # save reaction time value
+                        rt = ev_df[ev_df['event_type'] == 'response']['onset'].values[0] - ev_df[ev_df['event_type'] == 'stim']['onset'].values[0]
+
+                        # save dataframe
+                        df_manual_responses = pd.concat([df_manual_responses, 
+                                                pd.DataFrame({'sj': ['sub-'+self.dataObj.sj_num], 
+                                                            'trial_num': [int(t)],
+                                                            'block_num': [int(blk)], 
+                                                            'target_ecc': [df_blk_info[df_blk_info['index'] == t]['target_ecc'].values[0]], 
+                                                            'set_size': [df_blk_info[df_blk_info['index'] == t]['set_size'].values[0]],
+                                                            'RT': [rt], 
+                                                            'correct_response': [correct_response]})
+                                            ])
+
+                    else: # no responses given, missed trial
+                        # save dataframe
+                        df_manual_responses = pd.concat([df_manual_responses, 
+                                                pd.DataFrame({'sj': ['sub-'+self.dataObj.sj_num], 
+                                                            'trial_num': [int(t)],
+                                                            'block_num': [int(blk)], 
+                                                            'target_ecc': [df_blk_info[df_blk_info['index'] == t]['target_ecc'].values[0]], 
+                                                            'set_size': [df_blk_info[df_blk_info['index'] == t]['set_size'].values[0]],
+                                                            'RT': [np.nan], 
+                                                            'correct_response': [np.nan]})
+                                            ])
+
+
         self.df_manual_responses = df_manual_responses
         
         
@@ -176,10 +254,35 @@ class BehResponses:
                 
         ####### if search task ########
         elif self.dataObj.task_name.lower() == 'visualsearch':
-            print('not implemented yet')
+            
+            # set up empty df
+            df_mean_results = pd.DataFrame({'sj': [],'target_ecc': [], 'set_size': [], 'mean_RT': [], 'accuracy': []})
+
+            # loop over blocks
+            for e in self.dataObj.ecc:
+                
+                for ss in self.dataObj.set_size:
+                    
+                    # sub select dataframe for specific set size and ecc
+                    df_e_ss = df_manual_responses[(df_manual_responses['target_ecc'] == e) &\
+                                            (df_manual_responses['set_size'] == ss)]
+                    
+                    # accuracy
+                    accuracy = np.nansum(df_e_ss['correct_response'].values)/len(df_e_ss['correct_response'].values)
+                    
+                    # mean reaction times
+                    mean_RT = np.nanmean(df_e_ss[df_e_ss['correct_response'] == 1]['RT'].values)
+                    
+                    # save dataframe
+                    df_mean_results = pd.concat([df_mean_results, 
+                                            pd.DataFrame({'sj': ['sub-'+self.dataObj.sj_num], 
+                                                        'target_ecc': [e], 
+                                                        'set_size': [ss],
+                                                        'mean_RT': [mean_RT], 
+                                                        'accuracy': [accuracy]})
+                                        ])
     
     
-        
         self.df_mean_results = df_mean_results   
         
 

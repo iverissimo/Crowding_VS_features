@@ -165,4 +165,20 @@ class BehVsearch(BehTask):
         # need to initialize parent class (BehTask), indicating output infos
         super().__init__(params = params, sj_num = sj_num, session = session)
         
+        self.task_name = 'VisualSearch'
+        
+        # task keys
+        self.task_keys = ['right', 'left']
+
+        # some relevant params
+        self.ecc = self.params['visual_search']['num_ecc']
+        self.set_size = self.params['visual_search']['set_size']
+        self.target_names = self.params['visual_search']['target_names']
+        
+        # get events
+        self.events_df = self.get_task_events(task_name = self.task_name)
+        # get trial info
+        self.trial_info_df = self.get_task_info(task_name = self.task_name)   
+
+
         
