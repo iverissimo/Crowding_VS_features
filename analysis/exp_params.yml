@@ -95,6 +95,9 @@ crowding:
   num_blks: 4 # number of blocks
   num_trl_cond: 20 # number of trials per visual hemifield, for a specific type of target and crowding type
 
+  nr_trials_flank: 160
+  nr_trials_unflank: 96
+
   max_resp_time: 4 #10 #2 # in seconds
   stim_display_time: .075 #.05 # in seconds
   iti: .5 # in seconds
