@@ -83,6 +83,9 @@ visual_search:
   task_dot_contrast: .2
   task_dot_opacity: .3
 
+  fix_check_rad: 2 #1 # radius for fixation check between trials (in degrees)
+  gaze_sampleCount: 150 #200 # number of sample to get in fixation check
+
   target_names: {'bL': {'color': 'blue', 'orientation': 'left'},
                  'pL': {'color': 'pink', 'orientation': 'left'},
                  'bR': {'color': 'blue', 'orientation': 'right'},

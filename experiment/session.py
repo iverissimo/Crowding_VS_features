@@ -377,7 +377,7 @@ class TrainVsearchSession(VsearchSession):
                         eyetracker_on = eyetracker_on)
 
         # some new settings for the training session
-        self.train_num_trl_cond = 2 # number of unique trials
+        self.train_num_trl_cond = 1 # number of unique trials
         self.feedback_time = .5 # amount of time to show feedback
         self.acc_feedback_time = 3 # seconds
 
@@ -392,9 +392,9 @@ class TrainVsearchSession(VsearchSession):
         self.gaze_sampleCount = 0
         self.feedback_response = []
         # radius around fixation (in pix), to check for gaze during iti  
-        self.maxDist = 1/utils.dva_per_pix(height_cm = self.settings['monitor_extra']['height'], 
-                                                distance_cm = self.settings['monitor']['distance'], 
-                                                vert_res_pix = self.screen[-1])
+        self.maxDist = self.settings['visual_search']['fix_check_rad']/utils.dva_per_pix(height_cm = self.settings['monitor_extra']['height'], 
+                                                                                        distance_cm = self.settings['monitor']['distance'], 
+                                                                                        vert_res_pix = self.screen[-1])
 
         # target names
         self.target_names = np.array([k for k in self.settings['visual_search']['target_names'].keys()])
