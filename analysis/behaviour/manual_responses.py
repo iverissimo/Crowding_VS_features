@@ -307,7 +307,59 @@ class BehResponses:
                                             ])
     
     
-        self.df_mean_results = df_mean_results   
+        self.df_mean_results = df_mean_results 
+
+    
+    def get_NoFlankers_meanRT(self, df_manual_responses, feature_type = ['target_both', 'target_color', 'target_ori']):
+        
+        """
+        Given subject reponses and trial info, 
+        returns data frame with mean reaction time and accuracy for NO flankers trials
+        
+        Parameters
+        ----------
+        df_manual_responses : DataFrame
+            dataframe with results from get_RTs()
+        
+        """   
+
+        # set up empty df
+        df_NoFlanker_results = pd.DataFrame({'sj': [],'type': [],  'mean_RT': [], 'accuracy': []})
+        
+        # loop over subjects
+        for i, pp in enumerate(self.dataObj.sj_num):
+
+            # loop over crowding types
+            for f_type in feature_type:
+            
+                # correct trials
+                if f_type == 'target_color':
+                    RT_f_type = df_manual_responses[(df_manual_responses['crowding_type'] == 'unflankered') & \
+                                      (df_manual_responses['correct_color'] == 1) & \
+                                      (df_manual_responses['sj'] == 'sub-{sj}'.format(sj = pp))]['RT'].values
+                
+                elif f_type == 'target_ori':
+                    RT_f_type = df_manual_responses[(df_manual_responses['crowding_type'] == 'unflankered') & \
+                                      (df_manual_responses['correct_ori'] == 1) & \
+                                      (df_manual_responses['sj'] == 'sub-{sj}'.format(sj = pp))]['RT'].values
+
+                elif f_type == 'target_both':
+                    RT_f_type = df_manual_responses[(df_manual_responses['crowding_type'] == 'unflankered') & \
+                                      (df_manual_responses['correct_response'] == 1) & \
+                                      (df_manual_responses['sj'] == 'sub-{sj}'.format(sj = pp))]['RT'].values
+
+                
+                accuracy = len(RT_f_type)/self.dataObj.nr_trials_unflank
+                
+                # save dataframe
+                df_NoFlanker_results = pd.concat([df_NoFlanker_results, 
+                                        pd.DataFrame({'sj': ['sub-{sj}'.format(sj = pp)], 
+                                                    'type': [f_type],  
+                                                    'mean_RT': [np.nanmean(RT_f_type)], 
+                                                    'accuracy': [accuracy]})
+                                    ])
+            
+        self.df_NoFlanker_results = df_NoFlanker_results 
         
 
     def get_critical_spacing(self, staircases = None, num_trials = 96):

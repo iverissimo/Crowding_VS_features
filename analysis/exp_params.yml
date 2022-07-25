@@ -123,9 +123,15 @@ crowding:
                  'bR': {'color': 'blue', 'orientation': 'right'},
                  'pR': {'color': 'pink', 'orientation': 'right'}}
 
-
-  
-  
+plotting:
+  target_feature_colors: {'target_ori': '#b2b1b3', 
+                          'target_color': '#9b8db0', 
+                          'target_both': '#000000'} # when looking at what target feature participants got right
+  crwd_type_colors: {'orientation': '#382a3c', 
+                    'color': '#b25068', 
+                    'conjunction': '#774360', 
+                    'unflankered': '#e7ab79'}
+      
   
 
 
