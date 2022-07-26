@@ -131,6 +131,7 @@ plotting:
                     'color': '#b25068', 
                     'conjunction': '#774360', 
                     'unflankered': '#e7ab79'}
+  ecc_colors: {4: '#006e7f', 8: '#f8cb2e', 12: '#ee5007'}
       
   
 

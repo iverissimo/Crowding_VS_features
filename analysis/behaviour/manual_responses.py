@@ -6,6 +6,7 @@ import seaborn as sns
 import yaml
 
 from ast import literal_eval
+from sklearn.linear_model import LinearRegression
 
 class BehResponses:
     
@@ -402,4 +403,43 @@ class BehResponses:
                                             'critical_spacing': cs_val})]) 
 
         self.df_CS = df_CS
-                
+
+
+    def get_search_slopes(self, df_manual_responses):
+
+        """
+        calculate search slopes and intercept per ecc
+
+        Parameters
+        ----------
+        df_manual_responses : DataFrame
+            dataframe with results from get_RTs()
+        
+        """ 
+
+        # set empty df
+        df_search_slopes = pd.DataFrame({'sj': [],'target_ecc': [],  'slope': [], 'intercept': []})
+
+        # loop over subjects
+        for i, pp in enumerate(self.dataObj.sj_num):
+            # loop over ecc
+            for e in self.dataObj.ecc: 
+
+                # sub-select df
+                df_temp = df_manual_responses[(df_manual_responses['sj'] == 'sub-{sj}'.format(sj = pp)) & \
+                                    (df_manual_responses['target_ecc'] == e) & \
+                                    (df_manual_responses['correct_response'] == 1)]
+
+                # fit linear regressor
+                regressor = LinearRegression()
+                regressor.fit(df_temp[['set_size']], df_temp[['RT']]*1000) # because we want slope to be in ms/item
+
+                # save df
+                df_search_slopes = pd.concat([df_search_slopes, 
+                                                pd.DataFrame({'sj': ['sub-{sj}'.format(sj = pp)], 
+                                                            'target_ecc': [e],   
+                                                            'slope': [regressor.coef_[0][0]],
+                                                            'intercept': [regressor.intercept_[0]]})])
+
+        self.df_search_slopes = df_search_slopes 
+

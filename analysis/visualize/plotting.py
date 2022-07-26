@@ -10,6 +10,7 @@ import utils
 
 import ptitprince as pt # raincloud plots
 import matplotlib.patches as mpatches
+from  matplotlib.ticker import FuncFormatter
 
 
 class PlotsBehavior:
@@ -299,6 +300,136 @@ class PlotsBehavior:
                     fig.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_task-{task}_RT_ACC_flankered.png'.format(nr = self.nr_pp,
                                                                                                             ses = self.BehObj.dataObj.session, 
                                                                                                             task = self.BehObj.dataObj.task_name)))
+
+
+    def plot_RT_acc_search(self, save_fig = True):
+        
+        """ plot search reaction times and accuracy
+        
+        Parameters
+        ----------
+        save_fig : bool
+            save figure in output dir
+            
+        """
+        
+        # loop over subjects
+        for i, pp in enumerate(self.BehObj.dataObj.sj_num):
+            
+            fig, (ax1, ax2) = plt.subplots(1,2, figsize=(18,7), dpi=100, facecolor='w', edgecolor='k')
+
+            #### Reaction Time distribution ####
+            pt.RainCloud(data = self.BehObj.df_manual_responses[(self.BehObj.df_manual_responses['sj'] == 'sub-{sj}'.format(sj = pp)) & \
+                                                               (self.BehObj.df_manual_responses['correct_response'] == 1)], 
+                         x = 'set_size', y = 'RT', pointplot = True, hue='target_ecc',
+                         palette = self.BehObj.dataObj.params['plotting']['ecc_colors'],
+                        linecolor = 'grey',alpha = .5, dodge = True, saturation = 1, ax = ax1)
+            ax1.set_xlabel('Set Size', fontsize = 15, labelpad=15)
+            ax1.set_ylabel('RT [s]', fontsize = 15, labelpad=15)
+            ax1.set_title('Reaction Times Search sub-{sj}'.format(sj = pp), fontsize = 20)
+            # set x ticks as integer
+            ax1.xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(self.BehObj.dataObj.set_size[x]))) 
+            ax1.tick_params(axis='both', labelsize = 15)
+            ax1.set_ylim(0,6)
+
+            # quick fix for legen
+            handleA = mpatches.Patch(color = self.BehObj.dataObj.params['plotting']['ecc_colors'][4],
+                                     label = 4)
+            handleB = mpatches.Patch(color = self.BehObj.dataObj.params['plotting']['ecc_colors'][8],
+                                     label = 8)
+            handleC = mpatches.Patch(color = self.BehObj.dataObj.params['plotting']['ecc_colors'][12],
+                                     label = 12)
+            ax1.legend(loc = 'upper left',fontsize=12, handles = [handleA, handleB, handleC], 
+                       title="Target ecc", fancybox=True)
+
+            #### Accuracy ####
+            sns.pointplot(data = self.BehObj.df_mean_results[(self.BehObj.df_mean_results['sj'] == 'sub-{sj}'.format(sj = pp))],
+                          x = 'set_size', y = 'accuracy', hue='target_ecc',
+                         palette = self.BehObj.dataObj.params['plotting']['ecc_colors'], ax = ax2)
+            ax2.set_xlabel('Set Size', fontsize = 15, labelpad=15)
+            ax2.set_ylabel('Accuracy', fontsize = 15, labelpad=15)
+            ax2.set_title('Accuracy Search sub-{sj}'.format(sj = pp), fontsize = 20)
+            # set x ticks as integer
+            ax2.xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(self.BehObj.dataObj.set_size[x]))) 
+            ax2.tick_params(axis='both', labelsize = 15)
+            ax2.set_ylim(0.5,1)
+
+            # quick fix for legen
+            ax2.legend(loc = 'lower right',fontsize=10, handles = [handleA, handleB, handleC], 
+                       title="Target ecc", fancybox=True)
+            
+            if save_fig:
+                fig.savefig(op.join(self.outputdir, 'sub-{sj}_ses-{ses}_task-{task}_VSearch_RT_acc.png'.format(sj = pp,
+                                                                                                            ses = self.BehObj.dataObj.session, 
+                                                                                                            task = self.BehObj.dataObj.task_name)))
+                
+        # if we have more than 1 participant data in object
+        if self.nr_pp > 1: # make group plot
+            
+            fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2,2, figsize=(30,20), dpi=100, facecolor='w', edgecolor='k')
+
+            #### Search Reaction times, as a function of set size and ecc ####
+            pt.RainCloud(data = self.BehObj.df_mean_results,
+                         x = 'set_size', y = 'mean_RT', pointplot = True, hue='target_ecc',
+                         palette = self.BehObj.dataObj.params['plotting']['ecc_colors'],
+                        linecolor = 'grey',alpha = .5, dodge = True, saturation = 1, ax = ax1)
+            ax1.set_xlabel('Set Size', fontsize = 15, labelpad=15)
+            ax1.set_ylabel('RT [s]', fontsize = 15, labelpad=15)
+            ax1.set_title('Mean Reaction Times Search N = {nr}'.format(nr = self.nr_pp), fontsize = 20)
+            # set x ticks as integer
+            ax1.xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(self.BehObj.dataObj.set_size[x]))) 
+            ax1.tick_params(axis='both', labelsize = 15)
+            ax1.set_ylim(0.5,4)
+            ax1.legend(loc = 'lower right',fontsize=10, handles = [handleA, handleB, handleC], 
+                       title="Target ecc", fancybox=True)
+
+            #### Search accuracy, as a function of set size and ecc ####
+            pt.RainCloud(data = self.BehObj.df_mean_results,
+                         x = 'set_size', y = 'accuracy', pointplot = True, hue='target_ecc',
+                         palette = self.BehObj.dataObj.params['plotting']['ecc_colors'],
+                        linecolor = 'grey',alpha = .5, dodge = True, saturation = 1, ax = ax2)
+            ax2.set_xlabel('Set Size', fontsize = 15, labelpad=15)
+            ax2.set_ylabel('Accuracy', fontsize = 15, labelpad=15)
+            ax2.set_title('Accuracy Search N = {nr}'.format(nr = self.nr_pp), fontsize = 20)
+            # set x ticks as integer
+            ax2.xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(self.BehObj.dataObj.set_size[x]))) 
+            ax2.tick_params(axis='both', labelsize = 15)
+            ax2.set_ylim(0.5,1)
+
+            # quick fix for legen
+            ax2.legend(loc = 'lower right',fontsize=10, handles = [handleA, handleB, handleC], 
+                       title="Target ecc", fancybox=True)
+
+            #### Search Reaction times, per participant ####
+            sns.pointplot(x = 'set_size', y = 'mean_RT', hue = 'sj',
+                        data = self.BehObj.df_mean_results, 
+                         ax = ax3)
+            ax3.set_xlabel('Set Size', fontsize = 15, labelpad=15)
+            ax3.set_ylabel('RT [s]', fontsize = 15, labelpad=15)
+            ax3.set_title('Mean Reaction Times Search N = {nr}'.format(nr = self.nr_pp), fontsize = 20)
+            # set x ticks as integer
+            ax3.xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(self.BehObj.dataObj.set_size[x]))) 
+            ax3.tick_params(axis='both', labelsize = 15)
+            ax3.set_ylim(0,4)
+            ax3.legend(loc = 'lower right',fontsize=10, fancybox=True)
+
+            #### Search Slopes, as a function of ecc ####
+            pt.RainCloud(data = self.BehObj.df_search_slopes,
+                         x = 'target_ecc', y = 'slope', pointplot = True, #hue='target_ecc',
+                         palette = self.BehObj.dataObj.params['plotting']['ecc_colors'],
+                        linecolor = 'grey',alpha = .5, dodge = True, saturation = 1, ax = ax4)
+            ax4.set_xlabel('Target Eccentricity', fontsize = 15, labelpad=15)
+            ax4.set_ylabel('RT/set size [ms/item]', fontsize = 15, labelpad=15)
+            ax4.set_title('Search Slopes N = {nr}'.format(nr = self.nr_pp), fontsize = 20)
+            # set x ticks as integer
+            ax4.tick_params(axis='both', labelsize = 15)
+            ax4.set_ylim(0,90)
+            
+            if save_fig:
+                fig.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_task-{task}_VSearch_RT_acc.png'.format(nr = self.nr_pp,
+                                                                                                            ses = self.BehObj.dataObj.session, 
+                                                                                                            task = self.BehObj.dataObj.task_name)))
+
 
             
         
