@@ -166,7 +166,7 @@ class VsearchSession(ExpSession):
         # set size to be displayed
         set_size = self.settings['visual_search']['set_size']
         # number of trials per target type
-        num_cond_trials = self.settings['visual_search']['num_trl_cond']*len(num_ecc)*len(set_size)
+        num_cond_trials = int(self.settings['visual_search']['num_trl_cond']/self.settings['visual_search']['min_blk_per_target'])*len(num_ecc)*len(set_size)
 
         # make df with trial info, 
         # also including target and distractor positions on screen
@@ -178,7 +178,7 @@ class VsearchSession(ExpSession):
 
         # in each block, target is different
         # but randomize across participants
-        self.blk_targets = self.target_names.copy()
+        self.blk_targets = np.tile(self.target_names.copy(), self.settings['visual_search']['min_blk_per_target'])
         np.random.shuffle(self.blk_targets)
 
         for blk, name in enumerate(self.blk_targets):

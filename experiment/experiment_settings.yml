@@ -78,6 +78,8 @@ visual_search:
   max_ecc: 16 # max eccentricity to plot stimuli (dva) - if none then occupy whole screen
   ecc_grid_step: 2 # step size for ecc grid (dva)
 
+  min_blk_per_target: 2 # minimum number of blocks for target
+
   task_dot_size: .05 #.1 # ratio of gabor size
   task_dot_dist: .17 #.2 #8 # ratio of gabor radius
   task_dot_contrast: .2
