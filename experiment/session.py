@@ -155,7 +155,7 @@ class VsearchSession(ExpSession):
         self.correct_responses = 0
         self.gaze_sampleCount = 0
         # radius around fixation (in pix), to check for gaze during iti  
-        self.maxDist = 1/utils.dva_per_pix(height_cm = self.settings['monitor_extra']['height'], 
+        self.maxDist = self.settings['visual_search']['fix_check_rad']/utils.dva_per_pix(height_cm = self.settings['monitor_extra']['height'], 
                                                 distance_cm = self.settings['monitor']['distance'], 
                                                 vert_res_pix = self.screen[-1])
 

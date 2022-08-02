@@ -249,7 +249,7 @@ class TrainVsearchTrial(VsearchTrial):
                         self.session.gaze_sampleCount += 1
 
                     # If enough samples within boundary
-                    if self.session.gaze_sampleCount >= 200:
+                    if self.session.gaze_sampleCount >= self.session.settings['visual_search']['gaze_sampleCount']:
                         print('correctFixation')
                         self.session.gaze_sampleCount = 0
                         self.stop_phase()
