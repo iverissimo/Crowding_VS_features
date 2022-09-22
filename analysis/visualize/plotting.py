@@ -1,4 +1,5 @@
 
+from tty import CC
 import numpy as np
 import os
 import os.path as op
@@ -12,6 +13,9 @@ import ptitprince as pt # raincloud plots
 import matplotlib.patches as mpatches
 from  matplotlib.ticker import FuncFormatter
 
+from statsmodels.stats.anova import AnovaRM
+import itertools
+from scipy.stats import wilcoxon
 
 class PlotsBehavior:
     
@@ -108,7 +112,11 @@ class PlotsBehavior:
                     self.BehObj.dataObj.params['crowding']['staircase']['distance_ratio_bounds'][-1] + .05)
             
             if save_fig:
-                fig.savefig(op.join(self.outputdir, 'sub-{sj}_ses-{ses}_task-{task}_staircases.png'.format(sj = pp,
+                pp_folder = op.join(self.outputdir, 'sub-{sj}'.format(sj = pp))
+                if not op.isdir(pp_folder):
+                    os.makedirs(pp_folder)
+
+                fig.savefig(op.join(pp_folder, 'sub-{sj}_ses-{ses}_task-{task}_staircases.png'.format(sj = pp,
                                                                                                             ses = self.BehObj.dataObj.session, 
                                                                                                             task = self.BehObj.dataObj.task_name)))
 
@@ -131,7 +139,7 @@ class PlotsBehavior:
         if no_flank:
             
             # loop over subjects
-            for i, pp in enumerate(self.BehObj.dataObj.sj_num):
+            for pp in self.BehObj.dataObj.sj_num:
             
                 fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,5), dpi=100, facecolor='w', edgecolor='k')
 
@@ -154,7 +162,11 @@ class PlotsBehavior:
                 ax2.set_ylim(0,1.05)
                 
                 if save_fig:
-                    fig.savefig(op.join(self.outputdir, 'sub-{sj}_ses-{ses}_task-{task}_RT_ACC_UNflankered.png'.format(sj = pp,
+                    pp_folder = op.join(self.outputdir, 'sub-{sj}'.format(sj = pp))
+                    if not op.isdir(pp_folder):
+                        os.makedirs(pp_folder)
+
+                    fig.savefig(op.join(pp_folder, 'sub-{sj}_ses-{ses}_task-{task}_RT_ACC_UNflankered.png'.format(sj = pp,
                                                                                                             ses = self.BehObj.dataObj.session, 
                                                                                                             task = self.BehObj.dataObj.task_name)))
                 
@@ -204,11 +216,10 @@ class PlotsBehavior:
                                                                                                             ses = self.BehObj.dataObj.session, 
                                                                                                             task = self.BehObj.dataObj.task_name)))
 
-        
         else: # flanked trials
             
             # loop over subjects
-            for i, pp in enumerate(self.BehObj.dataObj.sj_num):
+            for pp in self.BehObj.dataObj.sj_num:
 
                 fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,5), dpi=100, facecolor='w', edgecolor='k')
 
@@ -251,7 +262,11 @@ class PlotsBehavior:
                            handles = [handleA, handleB, handleC])
                 
                 if save_fig:
-                    fig.savefig(op.join(self.outputdir, 'sub-{sj}_ses-{ses}_task-{task}_RT_ACC_flankered.png'.format(sj = pp,
+                    pp_folder = op.join(self.outputdir, 'sub-{sj}'.format(sj = pp))
+                    if not op.isdir(pp_folder):
+                        os.makedirs(pp_folder)
+
+                    fig.savefig(op.join(pp_folder, 'sub-{sj}_ses-{ses}_task-{task}_RT_ACC_flankered.png'.format(sj = pp,
                                                                                                             ses = self.BehObj.dataObj.session, 
                                                                                                             task = self.BehObj.dataObj.task_name)))
                 
@@ -300,6 +315,30 @@ class PlotsBehavior:
                     fig.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_task-{task}_RT_ACC_flankered.png'.format(nr = self.nr_pp,
                                                                                                             ses = self.BehObj.dataObj.session, 
                                                                                                             task = self.BehObj.dataObj.task_name)))
+
+                #### one-way repeated measures ANOVA #### 
+                aovrm2way = AnovaRM(self.BehObj.df_mean_results, 
+                                    depvar = 'accuracy', subject = 'sj', within = ['crowding_type'])
+                res2way = aovrm2way.fit()
+
+                print(res2way)
+
+                # save it
+                res2way.anova_table.to_csv(op.join(self.outputdir,'RT_ANOVA.csv'))
+
+                ###### do post hoc wilcoxon to test differences between group ####
+                ###### pairs to compare
+                p_value = .005
+
+                # set all possible pairs
+                crwd_combinations = list(itertools.combinations(self.BehObj.df_mean_results.crowding_type.unique(), 2))
+
+                for cc in crwd_combinations:
+                    pval_wilcox = wilcoxon(self.BehObj.df_mean_results[self.BehObj.df_mean_results.crowding_type == cc[0]].accuracy.values,
+                                            self.BehObj.df_mean_results[self.BehObj.df_mean_results.crowding_type == cc[-1]].accuracy.values)[-1]
+
+                    if pval_wilcox<(p_value/len(crwd_combinations)): # bonferroni correction of p-value
+                        print('SIGNIFICANT difference (p-val %.6f) in accuracy across crowding type pair%s'%(pval_wilcox, str(cc)))
 
 
     def plot_RT_acc_search(self, save_fig = True):
@@ -359,7 +398,11 @@ class PlotsBehavior:
                        title="Target ecc", fancybox=True)
             
             if save_fig:
-                fig.savefig(op.join(self.outputdir, 'sub-{sj}_ses-{ses}_task-{task}_VSearch_RT_acc.png'.format(sj = pp,
+                pp_folder = op.join(self.outputdir, 'sub-{sj}'.format(sj = pp))
+                if not op.isdir(pp_folder):
+                    os.makedirs(pp_folder)
+
+                fig.savefig(op.join(pp_folder, 'sub-{sj}_ses-{ses}_task-{task}_VSearch_RT_acc.png'.format(sj = pp,
                                                                                                             ses = self.BehObj.dataObj.session, 
                                                                                                             task = self.BehObj.dataObj.task_name)))
                 

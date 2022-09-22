@@ -10,6 +10,7 @@ import utils
 import sys
 
 import ptitprince as pt # raincloud plots
+from visualize import plotting
 
 from behaviour import load_beh_data, manual_responses
 
@@ -68,4 +69,15 @@ print('excluding %s participants'%(len(exclude_sj)))
 # save list in derivatives dir, to use later
 np.savetxt(data_crowding.excl_file, np.array(exclude_sj), delimiter=",", fmt='%s')
 
-    
+###### PLOTTING #########
+# plots for crowding task
+crwd_plotter = plotting.PlotsBehavior(crowding_behaviour)
+
+crwd_plotter.plot_RT_acc_crowding(no_flank = True)
+crwd_plotter.plot_RT_acc_crowding(no_flank = False)
+crwd_plotter.plot_critical_spacing()
+crwd_plotter.plot_staircases()
+
+# plots for search task
+search_plotter = plotting.PlotsBehavior(search_behaviour)
+search_plotter.plot_RT_acc_search()
