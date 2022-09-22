@@ -69,6 +69,8 @@ class BehTask:
         # if only one participant, put in list to make life easier later
         else:
             self.sj_num = [str(sj_num).zfill(3)] 
+
+        print('Total number of subjects %i'%len(self.sj_num))
         
         ##  and session type
         self.session = session

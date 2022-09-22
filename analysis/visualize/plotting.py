@@ -13,9 +13,6 @@ import ptitprince as pt # raincloud plots
 import matplotlib.patches as mpatches
 from  matplotlib.ticker import FuncFormatter
 
-from statsmodels.stats.anova import AnovaRM
-import itertools
-from scipy.stats import wilcoxon
 
 class PlotsBehavior:
     
@@ -315,30 +312,6 @@ class PlotsBehavior:
                     fig.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_task-{task}_RT_ACC_flankered.png'.format(nr = self.nr_pp,
                                                                                                             ses = self.BehObj.dataObj.session, 
                                                                                                             task = self.BehObj.dataObj.task_name)))
-
-                #### one-way repeated measures ANOVA #### 
-                aovrm2way = AnovaRM(self.BehObj.df_mean_results, 
-                                    depvar = 'accuracy', subject = 'sj', within = ['crowding_type'])
-                res2way = aovrm2way.fit()
-
-                print(res2way)
-
-                # save it
-                res2way.anova_table.to_csv(op.join(self.outputdir,'RT_ANOVA.csv'))
-
-                ###### do post hoc wilcoxon to test differences between group ####
-                ###### pairs to compare
-                p_value = .005
-
-                # set all possible pairs
-                crwd_combinations = list(itertools.combinations(self.BehObj.df_mean_results.crowding_type.unique(), 2))
-
-                for cc in crwd_combinations:
-                    pval_wilcox = wilcoxon(self.BehObj.df_mean_results[self.BehObj.df_mean_results.crowding_type == cc[0]].accuracy.values,
-                                            self.BehObj.df_mean_results[self.BehObj.df_mean_results.crowding_type == cc[-1]].accuracy.values)[-1]
-
-                    if pval_wilcox<(p_value/len(crwd_combinations)): # bonferroni correction of p-value
-                        print('SIGNIFICANT difference (p-val %.6f) in accuracy across crowding type pair%s'%(pval_wilcox, str(cc)))
 
 
     def plot_RT_acc_search(self, save_fig = True):

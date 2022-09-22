@@ -11,11 +11,12 @@ from psychopy import visual, tools, colors, event
 import psychopy.tools.colorspacetools as ct
 import itertools
 
-import time
 import colorsys
 import seaborn as sns
 
-import pylink
+from statsmodels.stats.anova import AnovaRM
+from scipy.stats import wilcoxon
+
 
 def dva_per_pix(height_cm = 30, distance_cm = 70, vert_res_pix = 1080):
 
@@ -816,3 +817,81 @@ def get_accuracy_rt_uncrowded(events_df, trial_info_df, sj = '',
 
                
     return pd.DataFrame.from_dict(df_acc), df_rt
+
+
+def repmesANOVA(df, dep_variable, within_var, sub_key = 'sj', filename = None):
+    
+    """
+    Performs repeated measure ANOVa (one or two way)
+    with statsmodel func
+    
+    Parameters
+    ----------
+    df : pandas dataframe
+        pandas dataframe with relevant values 
+    dep_variable: str
+        The dependent variable in data
+    within_var : list
+        The within-subject factors, list of strings 
+    sub_key : str
+        Specify the subject id
+    filename: str
+        if filename provided, will save ANOVA [default None, will not save]
+    
+    """
+    
+    anova_obj = AnovaRM(df, depvar = dep_variable, subject = sub_key, within = within_var)
+    res2way = anova_obj.fit()
+
+    print(res2way)
+
+    # save it
+    if filename:
+        res2way.anova_table.to_csv(filename)
+
+
+def wilcox_pairwise_comp(df, list_keys, p_value = .005, filename = None):
+    
+    """
+    Performs Wilcoxon pairwise test to 
+    test differences between group pairs
+    
+    Parameters
+    ----------
+    df : pandas dataframe
+        pandas dataframe with 3 columns - sj, variable, variable_val 
+    list_keys: list
+        list with variable names, that will be used to form the pairs
+    p_value : float
+        p value
+    filename: str
+        if filename provided, will save p-values in csv [default None, will not save]
+    
+    """
+    
+    # set all possible pairs
+    key_combinations = list(itertools.combinations(list_keys, 2))
+    
+    sig_bool = []
+    p_val_all = []
+    
+    for kc in key_combinations:
+        
+        pval_wilcox = wilcoxon(df[df.variable == kc[0]].variable_val.values,
+                                df[df.variable == kc[-1]].variable_val.values)[-1]
+
+        if pval_wilcox < (p_value/len(key_combinations)): # bonferroni correction of p-value
+            print('SIGNIFICANT difference (p-val %.6f) in mean value across pair %s'%(pval_wilcox, str(kc)))
+            
+            sig_bool.append(True)
+        else:
+            sig_bool.append(False)
+            
+        p_val_all.append(pval_wilcox)
+            
+    if filename:
+        
+        res_df = pd.DataFrame({'pairs': key_combinations, 
+                              'p_val': p_val_all,
+                              'significant': sig_bool})
+        res_df.to_csv(filename)

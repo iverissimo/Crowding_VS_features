@@ -9,6 +9,8 @@ import yaml
 import utils
 import sys
 
+import itertools
+
 import ptitprince as pt # raincloud plots
 from visualize import plotting
 
@@ -80,4 +82,53 @@ crwd_plotter.plot_staircases()
 
 # plots for search task
 search_plotter = plotting.PlotsBehavior(search_behaviour)
+
 search_plotter.plot_RT_acc_search()
+
+
+### STATS ###
+
+## check if there's difference between accuracy of different crowding types (includes unflankered)
+utils.repmesANOVA(crowding_behaviour.df_mean_results, 
+                    dep_variable = 'accuracy', within_var = ['crowding_type'], sub_key = 'sj', 
+                    filename = op.join(crowding_behaviour.dataObj.derivatives_pth,'acc_crowding_onewayANOVA.csv'))
+
+# also do a pair-wise comparison
+utils.wilcox_pairwise_comp(pd.DataFrame({'sj': crowding_behaviour.df_mean_results.sj.values,
+                                        'variable': crowding_behaviour.df_mean_results.crowding_type.values,
+                                        'variable_val': crowding_behaviour.df_mean_results.accuracy.values}),
+                                        crowding_behaviour.df_mean_results.crowding_type.unique(),
+                                        p_value = .005, 
+                                        filename = op.join(crowding_behaviour.dataObj.derivatives_pth,'acc_crowding_pairwiseWilcox.csv'))
+
+## check if there's difference between meant RT of different crowding types (includes unflankered)
+utils.repmesANOVA(crowding_behaviour.df_mean_results, 
+                    dep_variable = 'mean_RT', within_var = ['crowding_type'], sub_key = 'sj', 
+                    filename = op.join(crowding_behaviour.dataObj.derivatives_pth,'meanRT_crowding_onewayANOVA.csv'))
+
+# also do a pair-wise comparison
+utils.wilcox_pairwise_comp(pd.DataFrame({'sj': crowding_behaviour.df_mean_results.sj.values,
+                                        'variable': crowding_behaviour.df_mean_results.crowding_type.values,
+                                        'variable_val': crowding_behaviour.df_mean_results.mean_RT.values}),
+                                        crowding_behaviour.df_mean_results.crowding_type.unique(),
+                                        p_value = .005, 
+                                        filename = op.join(crowding_behaviour.dataObj.derivatives_pth,'meanRT_crowding_pairwiseWilcox.csv'))
+
+## check if there's difference between critical spacing of different crowding types 
+utils.repmesANOVA(crowding_behaviour.df_CS, 
+                    dep_variable = 'critical_spacing', within_var = ['crowding_type'], sub_key = 'sj', 
+                    filename = op.join(crowding_behaviour.dataObj.derivatives_pth,'CS_crowding_onewayANOVA.csv'))
+
+# also do a pair-wise comparison
+utils.wilcox_pairwise_comp(pd.DataFrame({'sj': crowding_behaviour.df_CS.sj.values,
+                                        'variable': crowding_behaviour.df_CS.crowding_type.values,
+                                        'variable_val': crowding_behaviour.df_CS.critical_spacing.values}),
+                                        crowding_behaviour.df_CS.crowding_type.unique(),
+                                        p_value = .005, 
+                                        filename = op.join(crowding_behaviour.dataObj.derivatives_pth,'CS_crowding_pairwiseWilcox.csv'))
+
+## two-way repeated-measures ANOVA with set size and eccentricity as factors
+# for search
+utils.repmesANOVA(search_behaviour.df_mean_results, 
+                    dep_variable = 'mean_RT', within_var = ['target_ecc', 'set_size'], sub_key = 'sj', 
+                    filename = op.join(search_behaviour.dataObj.derivatives_pth,'meanRT_Vsearch_twowayANOVA.csv'))
