@@ -33,7 +33,7 @@ window_extra: # refers to the parameters for the OLD Psychopy Window class (new 
 paths:
   curr_dir: 'local' # 'local'
   data_pth: {'lab': 'C:\Users\crowding_search_2\Desktop\LocalPC-DATA\',
-            'local': '/Volumes/Verissimo_Seagate_Hub_Plus/Projects/CVS/PILOT_DATA'} 
+            'local': '/Volumes/Verissimo_Seagate_Hub_Plus/Projects/CVS/DATA'} 
 
 eyetracker:
   address: '100.1.1.1' #  Eyelink eyetracker IP
@@ -89,6 +89,10 @@ visual_search:
                  'bR': {'color': 'blue', 'orientation': 'right'},
                  'pR': {'color': 'pink', 'orientation': 'right'}}
 
+  missed_trl_thresh: .15
+  acc_set_thresh: .75
+  acc_total_thresh: .85
+
 crowding:
   crwd_type: ['orientation', 'color', 'conjunction']
 
@@ -106,6 +110,11 @@ crowding:
   max_pos_jitter: 0.5 # for flankers, horizontal jitter (in dva)
 
   cs_trial_ratio: .5 # ratio of flanker trials to use for CS calculation
+
+  missed_trl_thresh: .25
+  noflank_acc_thresh: .3
+  cs_min_thresh: .2
+  cs_max_thresh: .65
 
   staircase: 
     

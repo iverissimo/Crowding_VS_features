@@ -197,7 +197,7 @@ class PlotsBehavior:
                 ax3.set_xlabel('')
                 ax3.set_title('Reaction Times (without flankers) N = {nr}'.format(nr = self.nr_pp))
                 ax3.set_ylim(0.2, 2)
-                ax3.legend(fontsize=8, loc='upper right')
+                ax3.legend([]) #ax3.legend(fontsize=8, loc='upper right')
 
                 sns.pointplot(x = 'type', y = 'accuracy', hue = 'sj', 
                             data = self.BehObj.df_NoFlanker_results, 
@@ -206,7 +206,7 @@ class PlotsBehavior:
                 ax4.set_xlabel('')
                 ax4.set_title('Accuracy (without flankers) N = {nr}'.format(nr = self.nr_pp))
                 ax4.set_ylim(0, 1.05)
-                ax4.legend(fontsize=8, loc='lower right')
+                ax4.legend([]) #ax4.legend(fontsize=8, loc='lower right')
                 
                 if save_fig:
                     fig.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_task-{task}_RT_ACC_UNflankered.png'.format(nr = self.nr_pp,
@@ -297,7 +297,7 @@ class PlotsBehavior:
                 ax3.set_xlabel('')
                 ax3.set_title('Reaction Times Crowding N = {nr}'.format(nr = self.nr_pp))
                 ax3.set_ylim(0.2, 2)
-                ax3.legend(fontsize=8, loc='upper right')
+                ax3.legend([]) #ax3.legend(fontsize=8, loc='upper right')
 
                 sns.pointplot(x = 'crowding_type', y = 'accuracy', hue = 'sj', 
                             data = self.BehObj.df_mean_results, 
@@ -306,7 +306,7 @@ class PlotsBehavior:
                 ax4.set_xlabel('')
                 ax4.set_title('Accuracy Crowding N = {nr}'.format(nr = self.nr_pp))
                 ax4.set_ylim(0, 1.05)
-                ax4.legend(fontsize=8, loc='lower right')
+                ax4.legend([]) #ax4.legend(fontsize=8, loc='lower right')
                 
                 if save_fig:
                     fig.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_task-{task}_RT_ACC_flankered.png'.format(nr = self.nr_pp,
@@ -395,7 +395,7 @@ class PlotsBehavior:
             # set x ticks as integer
             ax1.xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(self.BehObj.dataObj.set_size[x]))) 
             ax1.tick_params(axis='both', labelsize = 15)
-            ax1.set_ylim(0.5,4)
+            ax1.set_ylim(0.5,5.5)
             ax1.legend(loc = 'lower right',fontsize=10, handles = [handleA, handleB, handleC], 
                        title="Target ecc", fancybox=True)
 
@@ -426,8 +426,8 @@ class PlotsBehavior:
             # set x ticks as integer
             ax3.xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(self.BehObj.dataObj.set_size[x]))) 
             ax3.tick_params(axis='both', labelsize = 15)
-            ax3.set_ylim(0,4)
-            ax3.legend(loc = 'lower right',fontsize=10, fancybox=True)
+            ax3.set_ylim(0.5,5.5)
+            ax3.legend([]) #ax3.legend(loc = 'lower right',fontsize=10, fancybox=True)
 
             #### Search Slopes, as a function of ecc ####
             pt.RainCloud(data = self.BehObj.df_search_slopes,
@@ -439,7 +439,7 @@ class PlotsBehavior:
             ax4.set_title('Search Slopes N = {nr}'.format(nr = self.nr_pp), fontsize = 20)
             # set x ticks as integer
             ax4.tick_params(axis='both', labelsize = 15)
-            ax4.set_ylim(0,90)
+            ax4.set_ylim(0,110)
             
             if save_fig:
                 fig.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_task-{task}_VSearch_RT_acc.png'.format(nr = self.nr_pp,

@@ -433,6 +433,12 @@ class BehResponses:
         ----------
         staircases : DataFrame/dict
             dataframe with staircase intensities for all crowding types
+        num_trials: int
+            number of trials to use for CS calculation (last X trials)
+        cs_min_thresh: float
+            lower bound of CS, to use as exclusion criteria
+        cs_max_thresh: float
+            upper bound of CS, to use as exclusion criteria
         
         """ 
         

@@ -25,10 +25,10 @@ if len(sys.argv) < 2:
                     'as 1st argument in the command line!')
 
 participant = str(sys.argv[1]).zfill(3) # participant we are looking at
-ses_type = 'test'
+ses_type = 'test' # session to analyze (test vs train)
 
 # list of excluded subs
-exclude_sj = ['003', '011', '014']
+exclude_sj = ['003', '011', '014', '065']
 
 ## load data, info etc for participant
 data_crowding = load_beh_data.BehCrowding(settings_file, participant, ses_type, 
@@ -41,21 +41,26 @@ crowding_behaviour = manual_responses.BehResponses(data_crowding)
 search_behaviour = manual_responses.BehResponses(data_search)
 
 ## get RTs for all trials
-crowding_behaviour.get_RTs()
-search_behaviour.get_RTs()
+crowding_behaviour.get_RTs(missed_trl_thresh = data_crowding.params['crowding']['missed_trl_thresh'])
+search_behaviour.get_RTs(missed_trl_thresh = data_crowding.params['visual_search']['missed_trl_thresh'])
 
 ## get mean RT and accuracy
 crowding_behaviour.get_meanRT(df_manual_responses = crowding_behaviour.df_manual_responses)
-crowding_behaviour.get_NoFlankers_meanRT(df_manual_responses = crowding_behaviour.df_manual_responses)
-search_behaviour.get_meanRT(df_manual_responses = search_behaviour.df_manual_responses)
+crowding_behaviour.get_NoFlankers_meanRT(df_manual_responses = crowding_behaviour.df_manual_responses, 
+                                        acc_thresh = data_crowding.params['crowding']['noflank_acc_thresh'])
+search_behaviour.get_meanRT(df_manual_responses = search_behaviour.df_manual_responses,
+                            acc_set_thresh = data_search.params['visual_search']['acc_set_thresh'],
+                            acc_total_thresh = data_search.params['visual_search']['acc_total_thresh'])
 
 ## get search slopes
 search_behaviour.get_search_slopes(df_manual_responses = search_behaviour.df_manual_responses)
 
 ## get critical spacing for crowding
-crowding_behaviour.get_critical_spacing(num_trials = data_crowding.nr_trials_flank * data_crowding.ratio_trls_cs)
+crowding_behaviour.get_critical_spacing(num_trials = data_crowding.nr_trials_flank * data_crowding.ratio_trls_cs,
+                                        cs_min_thresh = data_crowding.params['crowding']['cs_min_thresh'],
+                                        cs_max_thresh = data_crowding.params['crowding']['cs_max_thresh'])
 
-## update list of exlcuded subjects
+## update list of excluded subjects
 exclude_sj = data_crowding.exclude_sj
 
 for pp in data_crowding.sj_num:
@@ -65,8 +70,13 @@ for pp in data_crowding.sj_num:
 
         if pp not in exclude_sj:
             exclude_sj.append(pp)
+
+## update subject list
+data_crowding.sj_num = [sID for sID in data_crowding.sj_num if sID not in exclude_sj]
+data_search.sj_num = [sID for sID in data_search.sj_num if sID not in exclude_sj]
     
 print('excluding %s participants'%(len(exclude_sj)))
+print('total participants left %s '%(len(data_crowding.sj_num)))
 
 # save list in derivatives dir, to use later
 np.savetxt(data_crowding.excl_file, np.array(exclude_sj), delimiter=",", fmt='%s')
@@ -98,7 +108,7 @@ utils.wilcox_pairwise_comp(pd.DataFrame({'sj': crowding_behaviour.df_mean_result
                                         'variable': crowding_behaviour.df_mean_results.crowding_type.values,
                                         'variable_val': crowding_behaviour.df_mean_results.accuracy.values}),
                                         crowding_behaviour.df_mean_results.crowding_type.unique(),
-                                        p_value = .005, 
+                                        p_value = .001, 
                                         filename = op.join(crowding_behaviour.dataObj.derivatives_pth,'acc_crowding_pairwiseWilcox.csv'))
 
 ## check if there's difference between meant RT of different crowding types (includes unflankered)
@@ -111,7 +121,7 @@ utils.wilcox_pairwise_comp(pd.DataFrame({'sj': crowding_behaviour.df_mean_result
                                         'variable': crowding_behaviour.df_mean_results.crowding_type.values,
                                         'variable_val': crowding_behaviour.df_mean_results.mean_RT.values}),
                                         crowding_behaviour.df_mean_results.crowding_type.unique(),
-                                        p_value = .005, 
+                                        p_value = .001, 
                                         filename = op.join(crowding_behaviour.dataObj.derivatives_pth,'meanRT_crowding_pairwiseWilcox.csv'))
 
 ## check if there's difference between critical spacing of different crowding types 
@@ -124,7 +134,7 @@ utils.wilcox_pairwise_comp(pd.DataFrame({'sj': crowding_behaviour.df_CS.sj.value
                                         'variable': crowding_behaviour.df_CS.crowding_type.values,
                                         'variable_val': crowding_behaviour.df_CS.critical_spacing.values}),
                                         crowding_behaviour.df_CS.crowding_type.unique(),
-                                        p_value = .005, 
+                                        p_value = .001, 
                                         filename = op.join(crowding_behaviour.dataObj.derivatives_pth,'CS_crowding_pairwiseWilcox.csv'))
 
 ## two-way repeated-measures ANOVA with set size and eccentricity as factors

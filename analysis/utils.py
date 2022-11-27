@@ -850,7 +850,7 @@ def repmesANOVA(df, dep_variable, within_var, sub_key = 'sj', filename = None):
         res2way.anova_table.to_csv(filename)
 
 
-def wilcox_pairwise_comp(df, list_keys, p_value = .005, filename = None):
+def wilcox_pairwise_comp(df, list_keys, p_value = .001, filename = None):
     
     """
     Performs Wilcoxon pairwise test to 

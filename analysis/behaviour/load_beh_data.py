@@ -4,6 +4,7 @@ import os, sys
 import os.path as op
 import pandas as pd
 import yaml
+import re
 
 from ast import literal_eval
 
@@ -60,7 +61,7 @@ class BehTask:
         ## set sj number list
         # if we want all participants in sourcedata folder
         if sj_num in ['group', 'all']: 
-            self.sj_num = [str(s[4:]).zfill(3) for s in os.listdir(self.sourcedata_pth) if 'sub-' in s and str(s[4:]).zfill(3) not in self.exclude_sj]
+            self.sj_num = [re.findall(r'\d{1,10}', sID)[0] for sID in os.listdir(self.sourcedata_pth) if re.findall(r'\d{1,10}', sID)[0] not in self.exclude_sj]
         
         # if we provide list of sj numbers
         elif isinstance(sj_num, list) or isinstance(sj_num, np.ndarray): 
