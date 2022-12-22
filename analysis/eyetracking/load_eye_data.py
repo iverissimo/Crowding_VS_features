@@ -184,6 +184,31 @@ class EyeTrack:
 
         return eye_events_df
 
+    def get_dva_per_pix(self, height_cm = 30, distance_cm = 73, vert_res_pix = 1080):
+
+        """ calculate degrees of visual angle per pixel, 
+        to use for screen boundaries when plotting/masking
+        Parameters
+        ----------
+        height_cm : int
+            screen height
+        distance_cm: float
+            screen distance (same unit as height)
+        vert_res_pix : int
+            vertical resolution of screen
+        
+        Outputs
+        -------
+        deg_per_px : float
+            degree (dva) per pixel
+        
+        """
+
+        # screen size in degrees / vertical resolution
+        deg_per_px = (2.0 * np.degrees(np.arctan(height_cm /(2.0*distance_cm))))/vert_res_pix
+
+        return deg_per_px 
+
 
 class EyeTrackVsearch(EyeTrack):
 
