@@ -14,7 +14,7 @@ class BehTask:
     Class that takes care of loading data paths and setting experiment params
     """
     
-    def __init__(self, params, sj_num, session = 'test', exclude_sj = []):
+    def __init__(self, params, sj_num, session = 'test'):
         
         """__init__
         constructor for class, takes experiment params and subject num as input
@@ -27,8 +27,6 @@ class BehTask:
             participant number
         session : str
             session type (test/train)
-        exclude_sj: list/str
-            list of subjects to exclude (can be none)
             
         """
         
@@ -52,16 +50,15 @@ class BehTask:
             print('loading file with excluded participants ID')
             exclude_sj = pd.read_csv(self.excl_file, header = None)[0].values
 
-        ## if there's participants we want to exclude
-        if len(exclude_sj) > 0:
             self.exclude_sj = [str(s).zfill(3) for s in exclude_sj]
+
         else:
-            self.exclude_sj = exclude_sj
+            raise ValueError('No exclusion file in derivatives dir, please run check_exclusion command')
             
         ## set sj number list
         # if we want all participants in sourcedata folder
         if sj_num in ['group', 'all']: 
-            self.sj_num = [re.findall(r'\d{1,10}', sID)[0] for sID in os.listdir(self.sourcedata_pth) if re.findall(r'\d{1,10}', sID)[0] not in self.exclude_sj]
+            self.sj_num = [re.findall(r'\d{1,10}', sID)[0] for sID in os.listdir(self.sourcedata_pth) if 'sub-' in sID and re.findall(r'\d{1,10}', sID)[0] not in self.exclude_sj]
         
         # if we provide list of sj numbers
         elif isinstance(sj_num, list) or isinstance(sj_num, np.ndarray): 
@@ -179,7 +176,7 @@ class BehTask:
 
 class BehCrowding(BehTask):
    
-    def __init__(self, params, sj_num, session = 'test', exclude_sj = []):  # initialize child class
+    def __init__(self, params, sj_num, session = 'test'):  # initialize child class
 
         """ Initializes BehCrowding object. 
       
@@ -191,12 +188,10 @@ class BehCrowding(BehTask):
             participant number
         session : str
             session type (test/train)
-        exclude_sj: list/str
-            list of subjects to exclude (can be none)
         """
 
         # need to initialize parent class (BehTask), indicating output infos
-        super().__init__(params = params, sj_num = sj_num, session = session, exclude_sj = exclude_sj)
+        super().__init__(params = params, sj_num = sj_num, session = session)
         
         self.task_name = 'Crowding'
         
@@ -277,7 +272,7 @@ class BehCrowding(BehTask):
                          
 class BehVsearch(BehTask):
    
-    def __init__(self, params, sj_num, session = 'test', exclude_sj = []):  # initialize child class
+    def __init__(self, params, sj_num, session = 'test'):  # initialize child class
 
         """ Initializes BehVsearch object. 
       
@@ -289,12 +284,10 @@ class BehVsearch(BehTask):
             participant number
         session : str
             session type (test/train)
-        exclude_sj: list/str
-            list of subjects to exclude (can be none)
         """
 
         # need to initialize parent class (BehTask), indicating output infos
-        super().__init__(params = params, sj_num = sj_num, session = session, exclude_sj = exclude_sj)
+        super().__init__(params = params, sj_num = sj_num, session = session)
         
         self.task_name = 'VisualSearch'
         

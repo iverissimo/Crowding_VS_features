@@ -9,6 +9,8 @@ import seaborn as sns
 import yaml
 import utils
 
+import scipy
+
 import ptitprince as pt # raincloud plots
 import matplotlib.patches as mpatches
 from  matplotlib.ticker import FuncFormatter
@@ -41,7 +43,7 @@ class PlotsBehavior:
         self.nr_pp = len(self.BehObj.dataObj.sj_num)
         
     
-    def plot_critical_spacing(self, save_fig = True):
+    def plot_critical_spacing(self, df_CS, save_fig = True):
         
         """ plot critical spacing for group
         
@@ -57,7 +59,7 @@ class PlotsBehavior:
             
             fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,5), dpi=100, facecolor='w', edgecolor='k')
             
-            pt.RainCloud(data = self.BehObj.df_CS, 
+            pt.RainCloud(data = df_CS, 
                         x = 'crowding_type', y = 'critical_spacing', pointplot = True, 
                         palette = self.BehObj.dataObj.params['plotting']['crwd_type_colors'],
                         linecolor = 'grey',alpha = .75, dodge = True, saturation = 1, ax = ax1)
@@ -68,7 +70,7 @@ class PlotsBehavior:
                         self.BehObj.dataObj.params['crowding']['staircase']['distance_ratio_bounds'][-1])
 
             sns.pointplot(x = 'crowding_type', y = 'critical_spacing', hue = 'sj',
-                            data = self.BehObj.df_CS, 
+                            data = df_CS, 
                              ax = ax2) 
             ax2.set_ylabel('CS')
             ax2.set_xlabel('')
@@ -110,15 +112,15 @@ class PlotsBehavior:
             
             if save_fig:
                 pp_folder = op.join(self.outputdir, 'sub-{sj}'.format(sj = pp))
-                if not op.isdir(pp_folder):
-                    os.makedirs(pp_folder)
+                os.makedirs(pp_folder, exist_ok=True)
 
                 fig.savefig(op.join(pp_folder, 'sub-{sj}_ses-{ses}_task-{task}_staircases.png'.format(sj = pp,
                                                                                                             ses = self.BehObj.dataObj.session, 
                                                                                                             task = self.BehObj.dataObj.task_name)))
 
 
-    def plot_RT_acc_crowding(self, no_flank = False, save_fig = True):
+    def plot_RT_acc_crowding(self, df_manual_responses = None, df_NoFlanker_results = None, df_mean_results = None,
+                                    no_flank = False, save_fig = True):
         
         """ plot RTs and accuracy of crowding task, for group AND each participant
         
@@ -140,7 +142,7 @@ class PlotsBehavior:
             
                 fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,5), dpi=100, facecolor='w', edgecolor='k')
 
-                pt.RainCloud(data = self.BehObj.df_NoFlanker_results[self.BehObj.df_NoFlanker_results['sj'] == 'sub-{sj}'.format(sj = pp)], 
+                pt.RainCloud(data = df_NoFlanker_results[df_NoFlanker_results['sj'] == 'sub-{sj}'.format(sj = pp)], 
                              x = 'type', y = 'mean_RT', pointplot = True, 
                              palette = self.BehObj.dataObj.params['plotting']['target_feature_colors'],
                             linecolor = 'grey',alpha = .75, dodge = True, saturation = 1, ax = ax1)
@@ -149,7 +151,7 @@ class PlotsBehavior:
                 ax1.set_title('Mean Reaction Times (without flankers) sub-{sj}'.format(sj = pp))
                 ax1.set_ylim(0.2,2)
 
-                pt.RainCloud(data = self.BehObj.df_NoFlanker_results[self.BehObj.df_NoFlanker_results['sj'] == 'sub-{sj}'.format(sj = pp)], 
+                pt.RainCloud(data = df_NoFlanker_results[df_NoFlanker_results['sj'] == 'sub-{sj}'.format(sj = pp)], 
                              x = 'type', y = 'accuracy', pointplot = True, 
                              palette = self.BehObj.dataObj.params['plotting']['target_feature_colors'],
                             linecolor = 'grey',alpha = .75, dodge = True, saturation = 1, ax = ax2)
@@ -160,8 +162,7 @@ class PlotsBehavior:
                 
                 if save_fig:
                     pp_folder = op.join(self.outputdir, 'sub-{sj}'.format(sj = pp))
-                    if not op.isdir(pp_folder):
-                        os.makedirs(pp_folder)
+                    os.makedirs(pp_folder, exist_ok=True)
 
                     fig.savefig(op.join(pp_folder, 'sub-{sj}_ses-{ses}_task-{task}_RT_ACC_UNflankered.png'.format(sj = pp,
                                                                                                             ses = self.BehObj.dataObj.session, 
@@ -172,7 +173,7 @@ class PlotsBehavior:
 
                 fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2,2, figsize=(15,10), dpi=100, facecolor='w', edgecolor='k')
 
-                pt.RainCloud(data = self.BehObj.df_NoFlanker_results, 
+                pt.RainCloud(data = df_NoFlanker_results, 
                              x = 'type', y = 'mean_RT', pointplot = True, 
                              palette = self.BehObj.dataObj.params['plotting']['target_feature_colors'],
                             linecolor = 'grey',alpha = .75, dodge = True, saturation = 1, ax = ax1)
@@ -181,7 +182,7 @@ class PlotsBehavior:
                 ax1.set_title('Reaction Times (without flankers) N = {nr}'.format(nr = self.nr_pp))
                 ax1.set_ylim(0.2, 2)
 
-                pt.RainCloud(data = self.BehObj.df_NoFlanker_results, 
+                pt.RainCloud(data = df_NoFlanker_results, 
                              x = 'type', y = 'accuracy', pointplot = True, 
                              palette = self.BehObj.dataObj.params['plotting']['target_feature_colors'],
                             linecolor = 'grey',alpha = .75, dodge = True, saturation = 1, ax = ax2)
@@ -191,7 +192,7 @@ class PlotsBehavior:
                 ax2.set_ylim(0, 1.05)
                 
                 sns.pointplot(x = 'type', y = 'mean_RT', hue = 'sj',
-                            data = self.BehObj.df_NoFlanker_results, 
+                            data = df_NoFlanker_results, 
                              ax = ax3)
                 ax3.set_ylabel('RT (seconds)')
                 ax3.set_xlabel('')
@@ -200,7 +201,7 @@ class PlotsBehavior:
                 ax3.legend([]) #ax3.legend(fontsize=8, loc='upper right')
 
                 sns.pointplot(x = 'type', y = 'accuracy', hue = 'sj', 
-                            data = self.BehObj.df_NoFlanker_results, 
+                            data = df_NoFlanker_results, 
                               ax = ax4)
                 ax4.set_ylabel('Accuracy')
                 ax4.set_xlabel('')
@@ -221,8 +222,8 @@ class PlotsBehavior:
                 fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,5), dpi=100, facecolor='w', edgecolor='k')
 
                 # Reaction Time distribution 
-                pt.RainCloud(data = self.BehObj.df_manual_responses[(self.BehObj.df_manual_responses['sj'] == 'sub-{sj}'.format(sj = pp)) & \
-                                                                   (self.BehObj.df_manual_responses['correct_response'] == 1)], 
+                pt.RainCloud(data = df_manual_responses[(df_manual_responses['sj'] == 'sub-{sj}'.format(sj = pp)) & \
+                                                        (df_manual_responses['correct_response'] == 1)], 
                              x = 'crowding_type', y = 'RT', pointplot = True, 
                              palette = self.BehObj.dataObj.params['plotting']['crwd_type_colors'],
                             linecolor = 'grey',alpha = .75, dodge = True, saturation = 1, ax = ax1)
@@ -232,15 +233,15 @@ class PlotsBehavior:
                 ax1.set_ylim(0.2,2)
 
                 # Accuracy (actual, and also show accuracy for target color and orientation separately)
-                sns.pointplot(data = self.BehObj.df_mean_results[self.BehObj.df_mean_results['sj'] == 'sub-{sj}'.format(sj = pp)], 
+                sns.pointplot(data = df_mean_results[df_mean_results['sj'] == 'sub-{sj}'.format(sj = pp)], 
                              x = 'crowding_type', y = 'accuracy_color', 
                              color = self.BehObj.dataObj.params['plotting']['target_feature_colors']['target_color'],
                              label = 'target color', ax = ax2)
-                sns.pointplot(data = self.BehObj.df_mean_results[self.BehObj.df_mean_results['sj'] == 'sub-{sj}'.format(sj = pp)], 
+                sns.pointplot(data = df_mean_results[df_mean_results['sj'] == 'sub-{sj}'.format(sj = pp)], 
                              x = 'crowding_type', y = 'accuracy_ori',
                              color = self.BehObj.dataObj.params['plotting']['target_feature_colors']['target_ori'],
                              label = 'target orientation', ax = ax2)
-                sns.pointplot(data = self.BehObj.df_mean_results[self.BehObj.df_mean_results['sj'] == 'sub-{sj}'.format(sj = pp)], 
+                sns.pointplot(data = df_mean_results[df_mean_results['sj'] == 'sub-{sj}'.format(sj = pp)], 
                              x = 'crowding_type', y = 'accuracy', 
                              color = self.BehObj.dataObj.params['plotting']['target_feature_colors']['target_both'],
                              label = 'target both', ax = ax2)
@@ -260,8 +261,7 @@ class PlotsBehavior:
                 
                 if save_fig:
                     pp_folder = op.join(self.outputdir, 'sub-{sj}'.format(sj = pp))
-                    if not op.isdir(pp_folder):
-                        os.makedirs(pp_folder)
+                    os.makedirs(pp_folder, exist_ok=True)
 
                     fig.savefig(op.join(pp_folder, 'sub-{sj}_ses-{ses}_task-{task}_RT_ACC_flankered.png'.format(sj = pp,
                                                                                                             ses = self.BehObj.dataObj.session, 
@@ -272,7 +272,7 @@ class PlotsBehavior:
 
                 fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2,2, figsize=(15,10), dpi=100, facecolor='w', edgecolor='k')
 
-                pt.RainCloud(data = self.BehObj.df_mean_results, 
+                pt.RainCloud(data = df_mean_results, 
                              x = 'crowding_type', y = 'mean_RT', pointplot = True, 
                              palette = self.BehObj.dataObj.params['plotting']['crwd_type_colors'],
                             linecolor = 'grey',alpha = .75, dodge = True, saturation = 1, ax = ax1)
@@ -281,7 +281,7 @@ class PlotsBehavior:
                 ax1.set_title('Reaction Times Crowding N = {nr}'.format(nr = self.nr_pp))
                 ax1.set_ylim(0.2, 2)
 
-                pt.RainCloud(data = self.BehObj.df_mean_results, 
+                pt.RainCloud(data = df_mean_results, 
                              x = 'crowding_type', y = 'accuracy', pointplot = True, 
                              palette = self.BehObj.dataObj.params['plotting']['crwd_type_colors'],
                             linecolor = 'grey',alpha = .75, dodge = True, saturation = 1, ax = ax2)
@@ -291,7 +291,7 @@ class PlotsBehavior:
                 ax2.set_ylim(0, 1.05)
                 
                 sns.pointplot(x = 'crowding_type', y = 'RT', hue = 'sj',
-                            data = self.BehObj.df_manual_responses[(self.BehObj.df_manual_responses['correct_response'] == 1)], 
+                            data = df_manual_responses[(df_manual_responses['correct_response'] == 1)], 
                              ax = ax3)
                 ax3.set_ylabel('RT (seconds)')
                 ax3.set_xlabel('')
@@ -300,7 +300,7 @@ class PlotsBehavior:
                 ax3.legend([]) #ax3.legend(fontsize=8, loc='upper right')
 
                 sns.pointplot(x = 'crowding_type', y = 'accuracy', hue = 'sj', 
-                            data = self.BehObj.df_mean_results, 
+                            data = df_mean_results, 
                               ax = ax4)
                 ax4.set_ylabel('Accuracy')
                 ax4.set_xlabel('')
@@ -314,7 +314,8 @@ class PlotsBehavior:
                                                                                                             task = self.BehObj.dataObj.task_name)))
 
 
-    def plot_RT_acc_search(self, save_fig = True):
+    def plot_RT_acc_search(self, df_manual_responses = None, df_mean_results = None, df_search_slopes = None,
+                        save_fig = True):
         
         """ plot search reaction times and accuracy
         
@@ -331,8 +332,8 @@ class PlotsBehavior:
             fig, (ax1, ax2) = plt.subplots(1,2, figsize=(18,7), dpi=100, facecolor='w', edgecolor='k')
 
             #### Reaction Time distribution ####
-            pt.RainCloud(data = self.BehObj.df_manual_responses[(self.BehObj.df_manual_responses['sj'] == 'sub-{sj}'.format(sj = pp)) & \
-                                                               (self.BehObj.df_manual_responses['correct_response'] == 1)], 
+            pt.RainCloud(data = df_manual_responses[(df_manual_responses['sj'] == 'sub-{sj}'.format(sj = pp)) & \
+                                                    (df_manual_responses['correct_response'] == 1)], 
                          x = 'set_size', y = 'RT', pointplot = True, hue='target_ecc',
                          palette = self.BehObj.dataObj.params['plotting']['ecc_colors'],
                         linecolor = 'grey',alpha = .5, dodge = True, saturation = 1, ax = ax1)
@@ -355,7 +356,7 @@ class PlotsBehavior:
                        title="Target ecc", fancybox=True)
 
             #### Accuracy ####
-            sns.pointplot(data = self.BehObj.df_mean_results[(self.BehObj.df_mean_results['sj'] == 'sub-{sj}'.format(sj = pp))],
+            sns.pointplot(data = df_mean_results[(df_mean_results['sj'] == 'sub-{sj}'.format(sj = pp))],
                           x = 'set_size', y = 'accuracy', hue='target_ecc',
                          palette = self.BehObj.dataObj.params['plotting']['ecc_colors'], ax = ax2)
             ax2.set_xlabel('Set Size', fontsize = 15, labelpad=15)
@@ -372,8 +373,7 @@ class PlotsBehavior:
             
             if save_fig:
                 pp_folder = op.join(self.outputdir, 'sub-{sj}'.format(sj = pp))
-                if not op.isdir(pp_folder):
-                    os.makedirs(pp_folder)
+                os.makedirs(pp_folder, exist_ok=True)
 
                 fig.savefig(op.join(pp_folder, 'sub-{sj}_ses-{ses}_task-{task}_VSearch_RT_acc.png'.format(sj = pp,
                                                                                                             ses = self.BehObj.dataObj.session, 
@@ -385,7 +385,7 @@ class PlotsBehavior:
             fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2,2, figsize=(30,20), dpi=100, facecolor='w', edgecolor='k')
 
             #### Search Reaction times, as a function of set size and ecc ####
-            pt.RainCloud(data = self.BehObj.df_mean_results,
+            pt.RainCloud(data = df_mean_results,
                          x = 'set_size', y = 'mean_RT', pointplot = True, hue='target_ecc',
                          palette = self.BehObj.dataObj.params['plotting']['ecc_colors'],
                         linecolor = 'grey',alpha = .5, dodge = True, saturation = 1, ax = ax1)
@@ -400,7 +400,7 @@ class PlotsBehavior:
                        title="Target ecc", fancybox=True)
 
             #### Search accuracy, as a function of set size and ecc ####
-            pt.RainCloud(data = self.BehObj.df_mean_results,
+            pt.RainCloud(data = df_mean_results,
                          x = 'set_size', y = 'accuracy', pointplot = True, hue='target_ecc',
                          palette = self.BehObj.dataObj.params['plotting']['ecc_colors'],
                         linecolor = 'grey',alpha = .5, dodge = True, saturation = 1, ax = ax2)
@@ -412,13 +412,13 @@ class PlotsBehavior:
             ax2.tick_params(axis='both', labelsize = 15)
             ax2.set_ylim(0.5,1)
 
-            # quick fix for legen
+            # quick fix for legend
             ax2.legend(loc = 'lower right',fontsize=10, handles = [handleA, handleB, handleC], 
                        title="Target ecc", fancybox=True)
 
             #### Search Reaction times, per participant ####
             sns.pointplot(x = 'set_size', y = 'mean_RT', hue = 'sj',
-                        data = self.BehObj.df_mean_results, 
+                        data = df_mean_results, 
                          ax = ax3)
             ax3.set_xlabel('Set Size', fontsize = 15, labelpad=15)
             ax3.set_ylabel('RT [s]', fontsize = 15, labelpad=15)
@@ -430,7 +430,7 @@ class PlotsBehavior:
             ax3.legend([]) #ax3.legend(loc = 'lower right',fontsize=10, fancybox=True)
 
             #### Search Slopes, as a function of ecc ####
-            pt.RainCloud(data = self.BehObj.df_search_slopes,
+            pt.RainCloud(data = df_search_slopes,
                          x = 'target_ecc', y = 'slope', pointplot = True, #hue='target_ecc',
                          palette = self.BehObj.dataObj.params['plotting']['ecc_colors'],
                         linecolor = 'grey',alpha = .5, dodge = True, saturation = 1, ax = ax4)
@@ -447,6 +447,143 @@ class PlotsBehavior:
                                                                                                             task = self.BehObj.dataObj.task_name)))
 
 
+    def plot_correlations_RT_CS(self, df_CS = None, df_mean_results = None, 
+                                        crowding_type_list = ['orientation', 'color', 'conjunction'],
+                                        save_fig = True, outdir = None):
+        
+        """ plot correlations between search reaction times and CS
+        
+        Parameters
+        ----------
+        save_fig : bool
+            save figure in output dir
             
+        """
         
+        # plot for each crowding type separately 
+
+        for crowding_type in crowding_type_list:
+
+            # build tidy dataframe with relevant info
+            corr_df4plotting = pd.DataFrame([])
+
+            # loop over subjects
+            for _, pp in enumerate(self.BehObj.dataObj.sj_num):
+
+                # make temporary dataframe
+                tmp_df = df_mean_results[(df_mean_results['sj']== 'sub-{s}'.format(s = pp))]
+                tmp_df['critical_spacing'] = df_CS[(df_CS['crowding_type']== crowding_type) & \
+                                    (df_CS['sj']== 'sub-{s}'.format(s = pp))].critical_spacing.values[0]
+                
+                # append
+                corr_df4plotting = pd.concat((corr_df4plotting,
+                                            tmp_df.copy()))
+
+            ## plot ecc x set size grid
+            # of correlations
+
+            # facetgrid of plots
+            g = sns.lmplot(
+                data = corr_df4plotting, x = 'critical_spacing', y = 'mean_RT',
+                col = 'target_ecc', row = 'set_size', height = 3, #palette = 'flare',
+                facet_kws = dict(sharex = True, sharey = True)
+            )
+
+            # main axis labels
+            g.set_axis_labels('{ct} CS'.format(ct = crowding_type), 'RT (s)', fontsize = 10, labelpad=15)
+            g.set(xlim=(.15, .75), ylim=(0, 5))
+
+            ## set subplot titles
+            for ax, title in zip(g.axes[0], ['Target {e} deg'.format(e = e_num) for e_num in self.BehObj.dataObj.ecc]):
+                ax.set_title(title, fontsize = 15, pad = 25)
+                
+            # remove unecessary title
+            for rax in g.axes[1:]:
+                for cax in rax:
+                    cax.set_title('')
+                    
+            # add row title
+            for ind, ax in enumerate([g.axes[i][-1] for i in range(len(self.BehObj.dataObj.set_size))]): # last column
+                ax.text(.8, 2.5, '{s} items'.format(s = self.BehObj.dataObj.set_size[ind]) , rotation = 0, fontsize = 15)
+
+            ## add Spearman correlation value and p-val 
+            # as annotation
+            for e_ind, ecc in enumerate(self.BehObj.dataObj.ecc):
+                for ss_ind, ss in enumerate(self.BehObj.dataObj.set_size):
+                    rho, pval = scipy.stats.spearmanr(corr_df4plotting[(corr_df4plotting['target_ecc'] == ecc) & \
+                                    (corr_df4plotting['set_size'] == ss)].mean_RT.values, 
+                                        corr_df4plotting[(corr_df4plotting['target_ecc'] == ecc) & \
+                                    (corr_df4plotting['set_size'] == ss)].critical_spacing.values)
+
+                    g.axes[e_ind, ss_ind].text(.2, 4.5, 
+                                            'rho = %.2f \np-value = %.3f'%(rho,pval), 
+                                            horizontalalignment='left')
+
+            if save_fig:
+                g.savefig(op.join(outdir, 'Nsj-{nr}_ses-{ses}_correlations_SearchRT_CS-{ct}.png'.format(nr = self.nr_pp,
+                                                                                                        ses = self.BehObj.dataObj.session,
+                                                                                                        ct = crowding_type)))
+
+
+    def plot_correlations_slopeRT_CS(self, df_CS = None, df_search_slopes = None, 
+                                        crowding_type_list = ['orientation', 'color', 'conjunction'],
+                                        save_fig = True, outdir = None):
         
+        """ plot correlations between search reaction times SLOPEs and CS
+        
+        Parameters
+        ----------
+        save_fig : bool
+            save figure in output dir
+            
+        """
+        
+        # plot for each crowding type separately 
+
+        for crowding_type in crowding_type_list:
+
+            # build tidy dataframe with relevant info
+            corr_slope_df4plotting = pd.DataFrame([])
+
+            # loop over subjects
+            for _, pp in enumerate(self.BehObj.dataObj.sj_num):
+
+                # make temporary dataframe
+                tmp_df = df_search_slopes[(df_search_slopes['sj']== 'sub-{s}'.format(s = pp))]
+                tmp_df['critical_spacing'] = df_CS[(df_CS['crowding_type']== crowding_type) & \
+                                            (df_CS['sj']== 'sub-{s}'.format(s = pp))].critical_spacing.values[0]
+                
+                # append
+                corr_slope_df4plotting = pd.concat((corr_slope_df4plotting,
+                                            tmp_df.copy()))
+
+            ## plot correlations per ecc 
+            g = sns.lmplot(
+                data = corr_slope_df4plotting, x = 'critical_spacing', y = 'slope',
+                col = 'target_ecc', height = 3, #palette = 'flare',
+                facet_kws = dict(sharex = True, sharey = True)
+            )
+
+            # axis labels
+            g.set_axis_labels('{ct} CS'.format(ct = crowding_type), 'RT/set size (ms/item)', fontsize = 10, labelpad=15)
+            g.set(xlim=(.15, .75), ylim=(0, 120))
+
+            # set subplot titles
+            for ax, title in zip(g.axes[0], ['Target {e} deg'.format(e = e_num) for e_num in self.BehObj.dataObj.ecc]):
+                ax.set_title(title, fontsize = 15, pad = 25)
+                
+
+            ## add Spearman correlation value and p-val 
+            # as annotation
+            for e_ind, ecc in enumerate(self.BehObj.dataObj.ecc):
+                rho, pval = scipy.stats.spearmanr(corr_slope_df4plotting[(corr_slope_df4plotting['target_ecc'] == ecc)].slope.values, 
+                                        corr_slope_df4plotting[(corr_slope_df4plotting['target_ecc'] == ecc)].critical_spacing.values)
+
+                g.axes[0][e_ind].text(.2, 110, 
+                                'rho = %.2f \np-value = %.3f'%(rho,pval), 
+                                horizontalalignment='left')
+
+            if save_fig:
+                g.savefig(op.join(outdir, 'Nsj-{nr}_ses-{ses}_correlations_SearchSlopeRT_CS-{ct}.png'.format(nr = self.nr_pp,
+                                                                                                        ses = self.BehObj.dataObj.session,
+                                                                                                        ct = crowding_type)))
