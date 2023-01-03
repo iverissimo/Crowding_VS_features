@@ -9,6 +9,8 @@ import seaborn as sns
 import yaml
 import utils
 
+import scipy
+
 import ptitprince as pt # raincloud plots
 import matplotlib.patches as mpatches
 from  matplotlib.ticker import FuncFormatter
@@ -129,7 +131,8 @@ class PlotsEye:
         f.savefig(op.join(outdir,'scanpath_block-{bn}_trial-{tn}.png'.format(bn = block_num, tn = trial_num)))
 
 
-    def plot_fixations_search(self, df_mean_fixations = None, save_fig = True):
+    def plot_fixations_search(self, df_trl_fixations = None,
+                                    df_mean_fixations = None, save_fig = True):
         
         """ plot mean number of fixations and duration for search 
         
@@ -146,13 +149,13 @@ class PlotsEye:
             fig, (ax1, ax2) = plt.subplots(1,2, figsize=(18,7), dpi=100, facecolor='w', edgecolor='k')
 
             #### Reaction Time distribution ####
-            pt.RainCloud(data = df_mean_fixations[(df_mean_fixations['sj'] == 'sub-{sj}'.format(sj = pp))], 
-                        x = 'set_size', y = 'mean_fixations', pointplot = True, hue='target_ecc',
+            pt.RainCloud(data = df_trl_fixations[(df_trl_fixations['sj'] == 'sub-{sj}'.format(sj = pp))], 
+                        x = 'set_size', y = 'nr_fixations', pointplot = True, hue='target_ecc',
                         palette = self.dataObj.params['plotting']['ecc_colors'],
                         linecolor = 'grey',alpha = .5, dodge = True, saturation = 1, ax = ax1)
             ax1.set_xlabel('Set Size', fontsize = 15, labelpad=15)
             ax1.set_ylabel('# Fixations', fontsize = 15, labelpad=15)
-            ax1.set_title('Mean # Fixations Search sub-{sj}'.format(sj = pp), fontsize = 20)
+            ax1.set_title('# Fixations Search sub-{sj}'.format(sj = pp), fontsize = 20)
             # set x ticks as integer
             ax1.xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(self.dataObj.set_size[x]))) 
             ax1.tick_params(axis='both', labelsize = 15)
@@ -169,7 +172,7 @@ class PlotsEye:
                     title="Target ecc", fancybox=True)
 
             #### Accuracy ####
-            sns.pointplot(data = df_mean_fixations[(df_mean_fixations['sj'] == 'sub-{sj}'.format(sj = pp))],
+            sns.pointplot(data = df_trl_fixations[(df_trl_fixations['sj'] == 'sub-{sj}'.format(sj = pp))],
                         x = 'set_size', y = 'mean_fix_dur', hue='target_ecc',
                         palette = self.dataObj.params['plotting']['ecc_colors'], ax = ax2)
             ax2.set_xlabel('Set Size', fontsize = 15, labelpad=15)
@@ -241,3 +244,193 @@ class PlotsEye:
                                                                                                             ses = self.dataObj.session, 
                                                                                                             task = self.dataObj.task_name)))
 
+
+    def plot_correlations_Fix_CS(self, df_CS = None, df_mean_fixations = None, 
+                                        crowding_type_list = ['orientation', 'color', 'conjunction'],
+                                        save_fig = True, outdir = None):
+        
+        """ plot correlations between mean number of fixations and CS
+        
+        Parameters
+        ----------
+        save_fig : bool
+            save figure in output dir
+            
+        """
+        
+        # plot for each crowding type separately 
+
+        for crowding_type in crowding_type_list:
+
+            # build tidy dataframe with relevant info
+            corr_df4plotting = pd.DataFrame([])
+
+            # loop over subjects
+            for _, pp in enumerate(self.dataObj.sj_num):
+
+                # make temporary dataframe
+                tmp_df = df_mean_fixations[(df_mean_fixations['sj']== 'sub-{s}'.format(s = pp))]
+                tmp_df['critical_spacing'] = df_CS[(df_CS['crowding_type']== crowding_type) & \
+                                    (df_CS['sj']== 'sub-{s}'.format(s = pp))].critical_spacing.values[0]
+                
+                # append
+                corr_df4plotting = pd.concat((corr_df4plotting,
+                                            tmp_df.copy()))
+
+            ## plot ecc x set size grid
+            # of correlations
+            
+            # facetgrid of plots
+            g = sns.lmplot(
+                data = corr_df4plotting, x = 'critical_spacing', y = 'mean_fixations',
+                col = 'target_ecc', row = 'set_size', height = 3, #palette = 'flare',
+                facet_kws = dict(sharex = True, sharey = True)
+            )
+
+            # main axis labels
+            g.set_axis_labels('{ct} CS'.format(ct = crowding_type), '# Fixations', fontsize = 10, labelpad=15)
+            g.set(xlim=(.15, .75), ylim=(0, 18))
+
+            ## set subplot titles
+            for ax, title in zip(g.axes[0], ['Target {e} deg'.format(e = e_num) for e_num in self.dataObj.ecc]):
+                ax.set_title(title, fontsize = 15, pad = 25)
+
+            # remove unecessary title
+            for rax in g.axes[1:]:
+                for cax in rax:
+                    cax.set_title('')
+
+            # add row title
+            for ind, ax in enumerate([g.axes[i][-1] for i in range(len(self.dataObj.set_size))]): # last column
+                ax.text(.8, 9, '{s} items'.format(s = self.dataObj.set_size[ind]) , rotation = 0, fontsize = 15)
+
+            ## add Spearman correlation value and p-val 
+            # as annotation
+            for e_ind, ecc in enumerate(self.dataObj.ecc):
+                for ss_ind, ss in enumerate(self.dataObj.set_size):
+                    rho, pval = scipy.stats.spearmanr(corr_df4plotting[(corr_df4plotting['target_ecc'] == ecc) & \
+                                    (corr_df4plotting['set_size'] == ss)].mean_fixations.values, 
+                                        corr_df4plotting[(corr_df4plotting['target_ecc'] == ecc) & \
+                                    (corr_df4plotting['set_size'] == ss)].critical_spacing.values)
+
+                    g.axes[e_ind, ss_ind].text(.2, 15, 
+                                            'rho = %.2f \np-value = %.3f'%(rho,pval), 
+                                            horizontalalignment='left')
+
+            if save_fig:
+                g.savefig(op.join(outdir, 'Nsj-{nr}_ses-{ses}_correlations_NumFixations_CS-{ct}.png'.format(nr = self.nr_pp,
+                                                                                                        ses = self.dataObj.session,
+                                                                                                        ct = crowding_type)))
+
+            ## plot same but for mean fixation duration
+            
+            ## plot ecc x set size grid
+            # of correlations
+            
+            # facetgrid of plots
+            g = sns.lmplot(
+                data = corr_df4plotting, x = 'critical_spacing', y = 'mean_fix_dur',
+                col = 'target_ecc', row = 'set_size', height = 3, #palette = 'flare',
+                facet_kws = dict(sharex = True, sharey = True)
+            )
+
+            # main axis labels
+            g.set_axis_labels('{ct} CS'.format(ct = crowding_type), 'Fixation duration (s)', fontsize = 10, labelpad=15)
+            g.set(xlim=(.15, .75), ylim=(0, .4))
+
+            ## set subplot titles
+            for ax, title in zip(g.axes[0], ['Target {e} deg'.format(e = e_num) for e_num in self.dataObj.ecc]):
+                ax.set_title(title, fontsize = 15, pad = 25)
+
+            # remove unecessary title
+            for rax in g.axes[1:]:
+                for cax in rax:
+                    cax.set_title('')
+
+            # add row title
+            for ind, ax in enumerate([g.axes[i][-1] for i in range(len(self.dataObj.set_size))]): # last column
+                ax.text(.8, .2, '{s} items'.format(s = self.dataObj.set_size[ind]) , rotation = 0, fontsize = 15)
+
+            ## add Spearman correlation value and p-val 
+            # as annotation
+            for e_ind, ecc in enumerate(self.dataObj.ecc):
+                for ss_ind, ss in enumerate(self.dataObj.set_size):
+                    rho, pval = scipy.stats.spearmanr(corr_df4plotting[(corr_df4plotting['target_ecc'] == ecc) & \
+                                    (corr_df4plotting['set_size'] == ss)].mean_fix_dur.values, 
+                                        corr_df4plotting[(corr_df4plotting['target_ecc'] == ecc) & \
+                                    (corr_df4plotting['set_size'] == ss)].critical_spacing.values)
+
+                    g.axes[e_ind, ss_ind].text(.2, .35, 
+                                            'rho = %.2f \np-value = %.3f'%(rho,pval), 
+                                            horizontalalignment='left')
+
+            if save_fig:
+                g.savefig(op.join(outdir, 'Nsj-{nr}_ses-{ses}_correlations_DurFixations_CS-{ct}.png'.format(nr = self.nr_pp,
+                                                                                                        ses = self.dataObj.session,
+                                                                                                        ct = crowding_type)))
+
+
+    def plot_correlations_slopeNumFix_CS(self, df_CS = None, df_search_fix_slopes = None, 
+                                        crowding_type_list = ['orientation', 'color', 'conjunction'],
+                                        save_fig = True, outdir = None):
+        
+        """ plot correlations between num fixations SLOPEs and CS
+        
+        Parameters
+        ----------
+        save_fig : bool
+            save figure in output dir
+            
+        """
+        
+        # plot for each crowding type separately 
+
+        for crowding_type in crowding_type_list:
+
+            # build tidy dataframe with relevant info
+            corr_slope_df4plotting = pd.DataFrame([])
+
+            # loop over subjects
+            for _, pp in enumerate(self.dataObj.sj_num):
+
+                # make temporary dataframe
+                tmp_df = df_search_fix_slopes[(df_search_fix_slopes['sj']== 'sub-{s}'.format(s = pp))]
+                tmp_df['critical_spacing'] = df_CS[(df_CS['crowding_type']== crowding_type) & \
+                                            (df_CS['sj']== 'sub-{s}'.format(s = pp))].critical_spacing.values[0]
+                
+                # append
+                corr_slope_df4plotting = pd.concat((corr_slope_df4plotting,
+                                            tmp_df.copy()))
+
+            ## plot correlations per ecc 
+            g = sns.lmplot(
+                data = corr_slope_df4plotting, x = 'critical_spacing', y = 'slope',
+                col = 'target_ecc', height = 3, #palette = 'flare',
+                facet_kws = dict(sharex = True, sharey = True)
+            )
+
+            # axis labels
+            g.set_axis_labels('{ct} CS'.format(ct = crowding_type), 'Fixations/set size (fix/item)', fontsize = 10, labelpad=15)
+            g.set(xlim=(.15, .75), ylim=(0, .5))
+
+            # set subplot titles
+            for ax, title in zip(g.axes[0], ['Target {e} deg'.format(e = e_num) for e_num in self.dataObj.ecc]):
+                ax.set_title(title, fontsize = 15, pad = 25)
+                
+
+            ## add Spearman correlation value and p-val 
+            # as annotation
+            for e_ind, ecc in enumerate(self.dataObj.ecc):
+                rho, pval = scipy.stats.spearmanr(corr_slope_df4plotting[(corr_slope_df4plotting['target_ecc'] == ecc)].slope.values, 
+                                        corr_slope_df4plotting[(corr_slope_df4plotting['target_ecc'] == ecc)].critical_spacing.values)
+
+                g.axes[0][e_ind].text(.2, .4, 
+                                'rho = %.2f \np-value = %.3f'%(rho,pval), 
+                                horizontalalignment='left')
+
+            if save_fig:
+                g.savefig(op.join(outdir, 'Nsj-{nr}_ses-{ses}_correlations_NumFixationsSlope_CS-{ct}.png'.format(nr = self.nr_pp,
+                                                                                                        ses = self.dataObj.session,
+                                                                                                        ct = crowding_type)))
+
+    

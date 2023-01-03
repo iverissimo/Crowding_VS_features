@@ -9,6 +9,7 @@ from scipy.signal import savgol_filter
 import utils
 
 import re
+from sklearn.linear_model import LinearRegression
 
 class EyeTrack:
 
@@ -246,7 +247,7 @@ class EyeTrackVsearch(EyeTrack):
         self.convert2asc()
 
     
-    def get_search_fixations(self, df_manual_responses = None):
+    def get_search_mean_fixations(self, df_manual_responses = None):
 
         """ 
         Get mean number of fixations and mean fixation durations
@@ -322,6 +323,127 @@ class EyeTrackVsearch(EyeTrack):
                                                                 'mean_fix_dur': [np.nanmean(dur)]})), ignore_index = True)
 
         self.df_mean_fixations = df_mean_fixations
+
+
+    def get_search_trl_fixations(self, df_manual_responses = None):
+
+        """ 
+        Get number of fixations and mean fixation durations
+        for each trial of search task
+        """
+
+        # make out dir, to save eye events dataframe
+        os.makedirs(self.outdir, exist_ok=True)
+
+        # set up empty df
+        df_trl_fixations = pd.DataFrame({'sj': [], 'trial_num': [], 'block_num': [],
+                                 'target_ecc': [], 'set_size': [], 'nr_fixations': [], 'mean_fix_dur': []})
+
+        ## loop over participants
+
+        for pp in self.dataObj.sj_num:
+
+            ## get all eye events (fixation and saccades)
+
+            eye_df_filename = op.join(self.outdir, 'sub-{sj}_eye_events.csv'.format(sj = pp))
+            
+            if not op.isfile(eye_df_filename):
+                print('Getting eye events for sub-{sj}'.format(sj = pp))
+                eye_events_df = self.get_eyelink_events(self.EYEevents_files['sub-{sj}'.format(sj = pp)], 
+                                                        sampling_rate = 1000, 
+                                                        save_as = eye_df_filename)
+            else:
+                print('Loading %s'%eye_df_filename)
+                eye_events_df = pd.read_csv(eye_df_filename)
+
+
+            ## select only correct trials for participant
+            pp_manual_response_df = df_manual_responses[(df_manual_responses['correct_response'] == 1) & \
+                                                        (df_manual_responses['sj'] == 'sub-{sj}'.format(sj = pp))]
+
+            ## select only fixations and times when 
+            # stimuli was displayed
+            all_fixation_df = eye_events_df[(eye_events_df['eye_event'] == 'FIX') & \
+                                        (eye_events_df['phase_name'] == 'stim')]
+
+            # get number of blocks
+            nr_blocks = all_fixation_df.block_num.unique().astype(int)
+
+            # loop over ecc
+            for e in self.dataObj.ecc:
+                
+                # loop over set size
+                for ss in self.dataObj.set_size:
+
+                    for blk in nr_blocks:
+                        # get trial indices for block
+                        blk_trials = pp_manual_response_df[(pp_manual_response_df['block_num'] == blk) & \
+                                                        (pp_manual_response_df['target_ecc'] == e) & \
+                                                        (pp_manual_response_df['set_size'] == ss)].trial_num.values
+                
+                        for t in blk_trials:
+                
+                            trl_fix_dur = all_fixation_df[(all_fixation_df['block_num'] == blk) & \
+                                                        (all_fixation_df['trial'] == t)].dur_in_sec.values
+
+                            dur = np.nanmean(trl_fix_dur) # mean duration
+                            fix = len(trl_fix_dur) #  number of fixations in each trial
+
+                            # append in dataframe
+                            df_trl_fixations = pd.concat((df_trl_fixations,
+                                                        pd.DataFrame({'sj': ['sub-{sj}'.format(sj = pp)],
+                                                                    'trial_num': [t], 
+                                                                    'block_num': [blk],
+                                                                    'target_ecc': [e], 
+                                                                    'set_size': [ss], 
+                                                                    'nr_fixations': [fix], 
+                                                                    'mean_fix_dur': [dur]})), ignore_index = True)
+
+        self.df_trl_fixations = df_trl_fixations
+
+
+    def get_fix_slopes(self, df_trl_fixations, fix_nr = True):
+
+        """
+        calculate search slopes and intercept per ecc
+
+        Parameters
+        ----------
+        df_manual_responses : DataFrame
+            dataframe with results from get_RTs()
+        
+        """ 
+
+        # set empty df
+        df_search_fix_slopes = pd.DataFrame({'sj': [],'target_ecc': [],  'slope': [], 'intercept': []})
+
+        # loop over subjects
+        for pp in self.dataObj.sj_num:
+
+            print('calculating search slopes for sub-{sj}'.format(sj = pp))
+
+            # loop over ecc
+            for e in self.dataObj.ecc: 
+
+                # sub-select df
+                df_temp = df_trl_fixations[(df_trl_fixations['sj'] == 'sub-{sj}'.format(sj = pp)) & \
+                                    (df_trl_fixations['target_ecc'] == e)]
+
+                # fit linear regressor
+                regressor = LinearRegression()
+                if fix_nr:
+                    regressor.fit(df_temp[['set_size']], df_temp[['nr_fixations']]) # slope in #fix/item
+                else:
+                    regressor.fit(df_temp[['set_size']], df_temp[['mean_fix_dur']]*1000) # because we want slope to be in ms/item
+
+                # save df
+                df_search_fix_slopes = pd.concat([df_search_fix_slopes, 
+                                                pd.DataFrame({'sj': ['sub-{sj}'.format(sj = pp)], 
+                                                            'target_ecc': [e],   
+                                                            'slope': [regressor.coef_[0][0]],
+                                                            'intercept': [regressor.intercept_[0]]})])
+
+        return df_search_fix_slopes 
 
 
 

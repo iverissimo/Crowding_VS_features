@@ -124,6 +124,41 @@ if task == 'both':
                                                     crowding_type_list = data_crowding.crwd_type,
                                                     save_fig = True, outdir = plot_dir)
 
+    elif py_cmd == 'correlations_Fix':
+
+        # make plot dir, if it doesnt exist
+        plot_dir = op.join(data_search.derivatives_pth, 'plots', 'correlations')
+        os.makedirs(plot_dir, exist_ok=True)
+
+        # get search RTs for all trials
+        search_behaviour.get_RTs(missed_trl_thresh = data_search.params['visual_search']['missed_trl_thresh'])
+
+        # get critical spacing for crowding
+        crowding_behaviour.get_critical_spacing(num_trials = data_crowding.nr_trials_flank * data_crowding.ratio_trls_cs,
+                                                cs_min_thresh = data_crowding.params['crowding']['cs_min_thresh'],
+                                                cs_max_thresh = data_crowding.params['crowding']['cs_max_thresh'])
+
+        # get mean number of fixations for search
+        eye_search.get_search_mean_fixations(df_manual_responses = search_behaviour.df_manual_responses)
+
+        ### plot correlations of Fixations with CS
+        eye_plotter.plot_correlations_Fix_CS(df_CS = crowding_behaviour.df_CS, 
+                                                df_mean_fixations = eye_search.df_mean_fixations, 
+                                                crowding_type_list = data_crowding.crwd_type,
+                                                save_fig = True, outdir = plot_dir)
+
+        # get fixations for all trials
+        eye_search.get_search_trl_fixations(df_manual_responses = search_behaviour.df_manual_responses)
+
+        # get number of fixations per item (slope)
+        df_search_fix_slopes = eye_search.get_fix_slopes(eye_search.df_trl_fixations.dropna(), fix_nr = True)
+
+        ## plot correlations of number of fixations per item with CS
+        eye_plotter.plot_correlations_slopeNumFix_CS(df_CS = crowding_behaviour.df_CS,  
+                                                df_search_fix_slopes = df_search_fix_slopes, 
+                                                crowding_type_list = data_crowding.crwd_type,
+                                                save_fig = True, outdir = plot_dir)
+
 elif task == 'search':
     
     # get RTs for all trials
@@ -146,11 +181,14 @@ elif task == 'search':
 
     elif py_cmd == 'fix':
 
-        # get number of fixations for search
-        eye_search.get_search_fixations(df_manual_responses = search_behaviour.df_manual_responses)
+        # get mean number of fixations for search
+        eye_search.get_search_mean_fixations(df_manual_responses = search_behaviour.df_manual_responses)
+        # and for all trials
+        eye_search.get_search_trl_fixations(df_manual_responses = search_behaviour.df_manual_responses)
 
         # plot
-        eye_plotter.plot_fixations_search(df_mean_fixations = eye_search.df_mean_fixations, save_fig = True)
+        eye_plotter.plot_fixations_search(df_trl_fixations = eye_search.df_trl_fixations,
+                                            df_mean_fixations = eye_search.df_mean_fixations, save_fig = True)
 
     elif py_cmd == 'scanpath': # plot saccade scan path for participant
 
