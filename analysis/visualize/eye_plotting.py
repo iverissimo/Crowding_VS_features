@@ -16,28 +16,28 @@ from  matplotlib.ticker import FuncFormatter
 class PlotsEye:
     
     
-    def __init__(self, behObj, outputdir = None):
+    def __init__(self, dataObj, outputdir = None):
         
         """__init__
         constructor for class 
         
         Parameters
         ----------
-        BehObj : BehResponses object
-            object from one of the classes defined in behaviour.manual_responses
+        dataObj : object
+            object from one of the classes defined in load_eye_data.X
             
         """
         
         # set results object to use later on
-        self.behObj = behObj
+        self.dataObj = dataObj
         # if output dir not defined, then make it in derivates
         if outputdir is None:
-            self.outputdir = op.join(self.behObj.derivatives_pth,'plots')
+            self.outputdir = op.join(self.dataObj.derivatives_pth,'plots', 'eyetracking')
         else:
             self.outputdir = outputdir
             
         # number of participants to plot
-        self.nr_pp = len(self.behObj.sj_num)
+        self.nr_pp = len(self.dataObj.sj_num)
 
 
     def plot_search_saccade_path(self, participant, eye_events_df, 
@@ -55,11 +55,11 @@ class PlotsEye:
         os.makedirs(outdir, exist_ok=True)
 
         ## screen resolution
-        hRes = self.behObj.params['window_extra']['size'][0]
-        vRes = self.behObj.params['window_extra']['size'][1]     
+        hRes = self.dataObj.params['window_extra']['size'][0]
+        vRes = self.dataObj.params['window_extra']['size'][1]     
 
         ## participant trial info
-        pp_trial_info = self.behObj.trial_info_df[self.behObj.trial_info_df['sj'] == 'sub-{pp}'.format(pp = participant)]
+        pp_trial_info = self.dataObj.trial_info_df[self.dataObj.trial_info_df['sj'] == 'sub-{pp}'.format(pp = participant)]
 
         ## get target and distractor positions as strings in list
         target_pos = pp_trial_info[(pp_trial_info['block'] == block_num) & \
@@ -78,12 +78,12 @@ class PlotsEye:
         target_ori_deg = pp_trial_info[(pp_trial_info['block'] == block_num) & \
                                 (pp_trial_info['index'] == trial_num)].target_ori.values[0]
         # convert to LR labels
-        target_ori = 'R' if target_ori_deg == self.behObj.params['stimuli']['ori_deg'] else 'L'
+        target_ori = 'R' if target_ori_deg == self.dataObj.params['stimuli']['ori_deg'] else 'L'
 
         distr_ori_deg = pp_trial_info[(pp_trial_info['block'] == block_num) & \
                                 (pp_trial_info['index'] == trial_num)].distractor_ori.values[0]
         # convert to LR labels
-        distr_ori = ['R' if ori == self.behObj.params['stimuli']['ori_deg'] else 'L' for ori in distr_ori_deg]
+        distr_ori = ['R' if ori == self.dataObj.params['stimuli']['ori_deg'] else 'L' for ori in distr_ori_deg]
 
         ## make figure
         f, s = plt.subplots(1, 1, figsize=(8,8))
@@ -127,3 +127,117 @@ class PlotsEye:
                         fill=True, shape='full', width=10, head_width=20, head_starts_at_zero=False, overhang=0)
 
         f.savefig(op.join(outdir,'scanpath_block-{bn}_trial-{tn}.png'.format(bn = block_num, tn = trial_num)))
+
+
+    def plot_fixations_search(self, df_mean_fixations = None, save_fig = True):
+        
+        """ plot mean number of fixations and duration for search 
+        
+        Parameters
+        ----------
+        save_fig : bool
+            save figure in output dir
+            
+        """
+        
+        # loop over subjects
+        for i, pp in enumerate(self.dataObj.sj_num):
+            
+            fig, (ax1, ax2) = plt.subplots(1,2, figsize=(18,7), dpi=100, facecolor='w', edgecolor='k')
+
+            #### Reaction Time distribution ####
+            pt.RainCloud(data = df_mean_fixations[(df_mean_fixations['sj'] == 'sub-{sj}'.format(sj = pp))], 
+                        x = 'set_size', y = 'mean_fixations', pointplot = True, hue='target_ecc',
+                        palette = self.dataObj.params['plotting']['ecc_colors'],
+                        linecolor = 'grey',alpha = .5, dodge = True, saturation = 1, ax = ax1)
+            ax1.set_xlabel('Set Size', fontsize = 15, labelpad=15)
+            ax1.set_ylabel('# Fixations', fontsize = 15, labelpad=15)
+            ax1.set_title('Mean # Fixations Search sub-{sj}'.format(sj = pp), fontsize = 20)
+            # set x ticks as integer
+            ax1.xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(self.dataObj.set_size[x]))) 
+            ax1.tick_params(axis='both', labelsize = 15)
+            ax1.set_ylim(0,17)
+
+            # quick fix for legen
+            handleA = mpatches.Patch(color = self.dataObj.params['plotting']['ecc_colors'][4],
+                                    label = 4)
+            handleB = mpatches.Patch(color = self.dataObj.params['plotting']['ecc_colors'][8],
+                                    label = 8)
+            handleC = mpatches.Patch(color = self.dataObj.params['plotting']['ecc_colors'][12],
+                                    label = 12)
+            ax1.legend(loc = 'upper left',fontsize=12, handles = [handleA, handleB, handleC], 
+                    title="Target ecc", fancybox=True)
+
+            #### Accuracy ####
+            sns.pointplot(data = df_mean_fixations[(df_mean_fixations['sj'] == 'sub-{sj}'.format(sj = pp))],
+                        x = 'set_size', y = 'mean_fix_dur', hue='target_ecc',
+                        palette = self.dataObj.params['plotting']['ecc_colors'], ax = ax2)
+            ax2.set_xlabel('Set Size', fontsize = 15, labelpad=15)
+            ax2.set_ylabel('Fixation duration (s)', fontsize = 15, labelpad=15)
+            ax2.set_title('Mean Fixation duration Search sub-{sj}'.format(sj = pp), fontsize = 20)
+            # set x ticks as integer
+            ax2.xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(self.dataObj.set_size[x]))) 
+            ax2.tick_params(axis='both', labelsize = 15)
+            ax2.set_ylim(0,.4)
+
+            # quick fix for legen
+            ax2.legend(loc = 'lower right',fontsize=10, handles = [handleA, handleB, handleC], 
+                    title="Target ecc", fancybox=True)
+
+            if save_fig:
+                pp_folder = op.join(self.outputdir, 'sub-{sj}'.format(sj = pp))
+                os.makedirs(pp_folder, exist_ok=True)
+
+                fig.savefig(op.join(pp_folder, 'sub-{sj}_ses-{ses}_task-{task}_VSearch_fixations.png'.format(sj = pp,
+                                                                                                            ses = self.dataObj.session, 
+                                                                                                            task = self.dataObj.task_name)))
+                
+        # if we have more than 1 participant data in object
+        if self.nr_pp > 1: # make group plot
+
+            fig, (ax1, ax2) = plt.subplots(1,2, figsize=(18,7), dpi=100, facecolor='w', edgecolor='k')
+
+            #### Reaction Time distribution ####
+            pt.RainCloud(data = df_mean_fixations, 
+                        x = 'set_size', y = 'mean_fixations', pointplot = True, hue='target_ecc',
+                        palette = self.dataObj.params['plotting']['ecc_colors'],
+                        linecolor = 'grey',alpha = .5, dodge = True, saturation = 1, ax = ax1)
+            ax1.set_xlabel('Set Size', fontsize = 15, labelpad=15)
+            ax1.set_ylabel('# Fixations', fontsize = 15, labelpad=15)
+            ax1.set_title('Mean # Fixations Search N = {nr}'.format(nr = self.nr_pp), fontsize = 20)
+            # set x ticks as integer
+            ax1.xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(self.dataObj.set_size[x]))) 
+            ax1.tick_params(axis='both', labelsize = 15)
+            ax1.set_ylim(0,17)
+
+            # quick fix for legen
+            handleA = mpatches.Patch(color = self.dataObj.params['plotting']['ecc_colors'][4],
+                                    label = 4)
+            handleB = mpatches.Patch(color = self.dataObj.params['plotting']['ecc_colors'][8],
+                                    label = 8)
+            handleC = mpatches.Patch(color = self.dataObj.params['plotting']['ecc_colors'][12],
+                                    label = 12)
+            ax1.legend(loc = 'upper left',fontsize=12, handles = [handleA, handleB, handleC], 
+                    title="Target ecc", fancybox=True)
+
+            #### Accuracy ####
+            sns.pointplot(data = df_mean_fixations,
+                        x = 'set_size', y = 'mean_fix_dur', hue='target_ecc',
+                        palette = self.dataObj.params['plotting']['ecc_colors'], ax = ax2)
+            ax2.set_xlabel('Set Size', fontsize = 15, labelpad=15)
+            ax2.set_ylabel('Fixation duration (s)', fontsize = 15, labelpad=15)
+            ax2.set_title('Mean Fixation duration Search N = {nr}'.format(nr = self.nr_pp), fontsize = 20)
+            # set x ticks as integer
+            ax2.xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(self.dataObj.set_size[x]))) 
+            ax2.tick_params(axis='both', labelsize = 15)
+            ax2.set_ylim(0,.4)
+
+            # quick fix for legen
+            ax2.legend(loc = 'lower right',fontsize=10, handles = [handleA, handleB, handleC], 
+                    title="Target ecc", fancybox=True)
+
+            if save_fig:
+                fig.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_task-{task}_VSearch_fixations.png'.format(nr = self.nr_pp,
+                                                                                                            ses = self.dataObj.session, 
+                                                                                                            task = self.dataObj.task_name)))
+
