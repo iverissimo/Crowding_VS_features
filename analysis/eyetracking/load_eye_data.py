@@ -6,6 +6,8 @@ import yaml
 
 from analysis.behaviour import load_beh_data
 from scipy.signal import savgol_filter
+from scipy import spatial
+
 import utils
 
 import re
@@ -445,6 +447,166 @@ class EyeTrackVsearch(EyeTrack):
 
         return df_search_fix_slopes 
 
+    def get_trl_percent_fix_on_features(self, eye_events_df, participant = None, block_num = None, trial_num = None,
+                                            hRes = 1920, vRes = 1080):
+
+        """ 
+        For a specific participant and trial,
+        get the percentage of fixations that fall on distractors
+        with the same color or orientation of target
+        also outputs percentage of fixations on target itself
+        """
+
+        ## participant trial info
+        pp_trial_info = self.dataObj.trial_info_df[self.dataObj.trial_info_df['sj'] == 'sub-{pp}'.format(pp = participant)]
+
+        ## get target and distractor positions as strings in list
+        target_pos = pp_trial_info[(pp_trial_info['block'] == block_num) & \
+                                (pp_trial_info['index'] == trial_num)].target_pos.values[0]
+        distr_pos = pp_trial_info[(pp_trial_info['block'] == block_num) & \
+                                (pp_trial_info['index'] == trial_num)].distractor_pos.values[0]
+
+        ## get target and distractor colors 
+        target_color = pp_trial_info[(pp_trial_info['block'] == block_num) & \
+                                (pp_trial_info['index'] == trial_num)].target_color.values[0]
+
+        distr_color = pp_trial_info[(pp_trial_info['block'] == block_num) & \
+                                (pp_trial_info['index'] == trial_num)].distractor_color.values[0]
+
+        ## get target and distractor orientations 
+        target_ori_deg = pp_trial_info[(pp_trial_info['block'] == block_num) & \
+                                (pp_trial_info['index'] == trial_num)].target_ori.values[0]
+        # convert to LR labels
+        target_ori = 'R' if target_ori_deg == self.dataObj.params['stimuli']['ori_deg'] else 'L'
+
+        distr_ori_deg = pp_trial_info[(pp_trial_info['block'] == block_num) & \
+                                (pp_trial_info['index'] == trial_num)].distractor_ori.values[0]
+        # convert to LR labels
+        distr_ori = ['R' if ori == self.dataObj.params['stimuli']['ori_deg'] else 'L' for ori in distr_ori_deg]
+
+        ## get trial fixations
+        trial_fix_df = eye_events_df[(eye_events_df['block_num'] == block_num) & \
+                                    (eye_events_df['phase_name'] == 'stim') & \
+                                    (eye_events_df['trial'] == trial_num) & \
+                                    (eye_events_df['eye_event'] == 'FIX')]
+
+        ## append distractor + target position 
+        all_stim_pos = distr_pos + [target_pos]
+
+        # kd-tree for quick nearest-neighbor lookup
+        tree = spatial.KDTree(all_stim_pos)
+
+        fix_target_color = 0
+        fix_target_ori = 0
+        fix_target = 0
+
+        # if there were fixations
+        if not trial_fix_df.empty:
+            for _,row in trial_fix_df.iterrows(): # iterate over dataframe
+
+                # make positions compatible with display
+                fx = row['x_pos'] - hRes/2 # start x pos
+                fy = row['y_pos'] - vRes/2; fy = -fy #start y pos
+                #print('x: %s, y: %s'%(str(fx), str(fy)))
+                
+                # get nearest stim distance and index
+                dist, stim_ind = tree.query([(fx,fy)])
+                
+                if stim_ind[0] < len(distr_pos): # if closest item is not target
+                    #print('distance to closest item is %.2f'%dist)
+                    
+                    if distr_ori[stim_ind[0]] == target_ori: # if looking at distractor with same orientation as target
+                        fix_target_ori += 1
+                        
+                    if str(distr_color[stim_ind[0]]) == str(target_color): # if looking at distractor with same color as target
+                        fix_target_color += 1
+                else:
+                    #print('Looking at target')
+                    fix_target += 1
+
+            # convert to percentage
+            fix_target_color /= len(trial_fix_df)
+            fix_target_ori /= len(trial_fix_df)
+            fix_target /= len(trial_fix_df)
+        
+        else: # if no fixations, then return nan
+            fix_target_color = np.nan
+            fix_target_ori = np.nan
+            fix_target = np.nan
+
+        return fix_target, fix_target_color, fix_target_ori
+
+
+    def get_fix_on_features_df(self, df_manual_responses = None):
+
+        """ 
+        Get percentage of fixations per trial
+        that fall on target features
+        """
+
+        # make out dir, to save eye events dataframe
+        os.makedirs(self.outdir, exist_ok=True)
+
+        # set up empty df
+        df_fixations_on_features = pd.DataFrame({'sj': [], 'trial_num': [], 'block_num': [],
+                                        'target_ecc': [], 'set_size': [], 
+                                        'fix_on_target': [], 'fix_on_target_color': [], 'fix_on_target_ori': []})
+
+        ## loop over participants
+
+        for pp in self.dataObj.sj_num:
+
+            ## get all eye events (fixation and saccades)
+
+            eye_df_filename = op.join(self.outdir, 'sub-{sj}_eye_events.csv'.format(sj = pp))
+            
+            if not op.isfile(eye_df_filename):
+                print('Getting eye events for sub-{sj}'.format(sj = pp))
+                eye_events_df = self.get_eyelink_events(self.EYEevents_files['sub-{sj}'.format(sj = pp)], 
+                                                        sampling_rate = 1000, 
+                                                        save_as = eye_df_filename)
+            else:
+                print('Loading %s'%eye_df_filename)
+                eye_events_df = pd.read_csv(eye_df_filename)
+
+
+            ## select only correct trials for participant
+            pp_manual_response_df = df_manual_responses[(df_manual_responses['correct_response'] == 1) & \
+                                                        (df_manual_responses['sj'] == 'sub-{sj}'.format(sj = pp))]
+
+            # loop over ecc
+            for e in self.dataObj.ecc:
+                
+                # loop over set size
+                for ss in self.dataObj.set_size:
+
+                    for blk in eye_events_df.block_num.unique().astype(int):
+                        # get trial indices for block
+                        blk_trials = pp_manual_response_df[(pp_manual_response_df['block_num'] == blk) & \
+                                                        (pp_manual_response_df['target_ecc'] == e) & \
+                                                        (pp_manual_response_df['set_size'] == ss)].trial_num.values
+                
+                        for t in blk_trials:
+
+                            fix_target_trl, fix_target_color_trl, fix_target_ori_trl = self.get_trl_percent_fix_on_features(eye_events_df, 
+                                                                                                              participant = pp, 
+                                                                                                              block_num = blk, 
+                                                                                                              trial_num = t,
+                                                                                                              hRes = self.dataObj.params['window_extra']['size'][0], 
+                                                                                                              vRes = self.dataObj.params['window_extra']['size'][1])
+
+                            # append in dataframe
+                            df_fixations_on_features = pd.concat((df_fixations_on_features,
+                                                        pd.DataFrame({'sj': ['sub-{sj}'.format(sj = pp)],
+                                                                    'trial_num': [t], 
+                                                                    'block_num': [blk],
+                                                                    'target_ecc': [e], 
+                                                                    'set_size': [ss], 
+                                                                    'fix_on_target': [fix_target_trl], 
+                                                                    'fix_on_target_color': [fix_target_color_trl],
+                                                                    'fix_on_target_ori': [fix_target_ori_trl]})), ignore_index = True)
+
+        return df_fixations_on_features
 
 
 class EyeTrackCrowding(EyeTrack):
