@@ -525,9 +525,14 @@ class EyeTrackVsearch(EyeTrack):
                     fix_target += 1
 
             # convert to percentage
-            fix_target_color /= len(trial_fix_df)
-            fix_target_ori /= len(trial_fix_df)
-            fix_target /= len(trial_fix_df)
+            nr_distractor_fix = len(trial_fix_df) - fix_target
+            if nr_distractor_fix > 0:
+                fix_target_color /= nr_distractor_fix # percentage of search fixations, excluding target fixations
+                fix_target_ori /= nr_distractor_fix
+            else:
+                fix_target_color = np.nan
+                fix_target_ori = np.nan
+            fix_target /= len(trial_fix_df) # percentage of fixations that were on target
         
         else: # if no fixations, then return nan
             fix_target_color = np.nan
@@ -607,6 +612,41 @@ class EyeTrackVsearch(EyeTrack):
                                                                     'fix_on_target_ori': [fix_target_ori_trl]})), ignore_index = True)
 
         return df_fixations_on_features
+
+    
+    def get_mean_fix_on_features_df(self, df_fixations_on_features = None):
+
+        """ 
+        Get mean percentage of fixations 
+        that fall on target features for ecc and set size
+        """
+
+        df_mean_fix_on_features = pd.DataFrame({'sj': [],'target_ecc': [], 'set_size': [], 
+                                                'mean_fix_on_target_color': [], 
+                                                'mean_fix_on_target_ori': [],
+                                                'mean_fix_on_target': []})
+
+        for pp in df_fixations_on_features.sj.unique():
+    
+            # loop over ecc
+            for e in self.dataObj.ecc:
+
+                # loop over set size
+                for ss in self.dataObj.set_size:
+                    
+                    mean_df = df_fixations_on_features[(df_fixations_on_features['sj'] == pp) & \
+                                (df_fixations_on_features['target_ecc'] == e) & \
+                                (df_fixations_on_features['set_size'] == ss)].mean()
+                    
+                    df_mean_fix_on_features = pd.concat((df_mean_fix_on_features,
+                                                        pd.DataFrame({'sj': [pp],
+                                                                    'target_ecc': [e], 
+                                                                    'set_size': [ss], 
+                                                                    'mean_fix_on_target_color': [mean_df.fix_on_target_color], 
+                                                                    'mean_fix_on_target_ori': [mean_df.fix_on_target_ori],
+                                                                    'mean_fix_on_target': [mean_df.fix_on_target]
+                                                                    })), ignore_index = True)
+        return df_mean_fix_on_features
 
 
 class EyeTrackCrowding(EyeTrack):
