@@ -28,6 +28,13 @@ class EyeTrack:
         self.dataObj = dataObj
         self.outdir = op.join(self.dataObj.derivatives_pth, 'eyetracking')
 
+        # gabor radius in pixels
+        self.r_gabor = (self.dataObj.params['stimuli']['size_deg']/2)/self.get_dva_per_pix(height_cm = self.dataObj.params['monitor_extra']['height'], 
+                                                                                            distance_cm = self.dataObj.params['monitor']['distance'], 
+                                                                                            vert_res_pix = self.dataObj.params['window_extra']['size'][1])
+
+        self.hRes = self.dataObj.params['window_extra']['size'][0]
+        self.vRes = self.dataObj.params['window_extra']['size'][1]  
 
     def convert2asc(self, replace_val = 0.0001):
         
@@ -249,7 +256,7 @@ class EyeTrackVsearch(EyeTrack):
         self.convert2asc()
 
     
-    def get_search_mean_fixations(self, df_manual_responses = None):
+    def get_search_mean_fixations(self, df_manual_responses = None, exclude_target_fix = True):
 
         """ 
         Get mean number of fixations and mean fixation durations
@@ -280,6 +287,8 @@ class EyeTrackVsearch(EyeTrack):
                 print('Loading %s'%eye_df_filename)
                 eye_events_df = pd.read_csv(eye_df_filename)
 
+            ## participant trial info
+            pp_trial_info = self.dataObj.trial_info_df[self.dataObj.trial_info_df['sj'] == 'sub-{pp}'.format(pp = pp)]
 
             ## select only correct trials for participant
             pp_manual_response_df = df_manual_responses[(df_manual_responses['correct_response'] == 1) & \
@@ -310,12 +319,39 @@ class EyeTrackVsearch(EyeTrack):
                 
                         for t in blk_trials:
                 
-                            trl_fix_dur = all_fixation_df[(all_fixation_df['block_num'] == blk) & \
-                                                        (all_fixation_df['trial'] == t)].dur_in_sec.values
+                            ## fixations for this trial
+                            trl_fix_df = all_fixation_df[(all_fixation_df['block_num'] == blk) & \
+                                                        (all_fixation_df['trial'] == t)]
 
-                            dur.append(np.mean(trl_fix_dur)) # append mean duration
-                            fix.append(len(trl_fix_dur)) # append number of fixations in each trial
-                            
+                            # if no fixations on trial to begin with
+                            if trl_fix_df.empty:
+                                dur.append(np.nan)
+                                fix.append(0)
+                            else:
+                                if exclude_target_fix: # if we want to exclude fixations on target
+                                    ## get target coordinates
+                                    target_pos = pp_trial_info[(pp_trial_info['block'] == blk) & \
+                                                            (pp_trial_info['index'] == t)].target_pos.values[0]
+
+                                    # get x,y coordinates of last fixation
+                                    fix_x = trl_fix_df.iloc[-1]['x_pos'] - self.hRes/2 # start x pos
+                                    fix_y = trl_fix_df.iloc[-1]['y_pos'] - self.vRes/2; fix_y = -fix_y #start y pos
+
+                                    # if fixation on target, remove
+                                    if ((target_pos[0] - fix_x)**2 + (target_pos[-1] - fix_y)**2) <= self.r_gabor ** 2:
+                                        trl_fix_df = trl_fix_df.iloc[:-1] 
+
+                                # if no fixations in trial
+                                if trl_fix_df.empty:
+                                    dur.append(np.nan)
+                                    fix.append(0)
+                                else:
+                                    # get fixation duration
+                                    trl_fix_dur = trl_fix_df.dur_in_sec.values
+
+                                    dur.append(np.nanmean(trl_fix_dur)) # append mean duration
+                                    fix.append(len(trl_fix_dur)) # append number of fixations in each trial
+
                     # append in dataframe
                     df_mean_fixations = pd.concat((df_mean_fixations,
                                                 pd.DataFrame({'sj': ['sub-{sj}'.format(sj = pp)],
@@ -327,7 +363,7 @@ class EyeTrackVsearch(EyeTrack):
         self.df_mean_fixations = df_mean_fixations
 
 
-    def get_search_trl_fixations(self, df_manual_responses = None):
+    def get_search_trl_fixations(self, df_manual_responses = None, exclude_target_fix = True):
 
         """ 
         Get number of fixations and mean fixation durations
@@ -358,6 +394,8 @@ class EyeTrackVsearch(EyeTrack):
                 print('Loading %s'%eye_df_filename)
                 eye_events_df = pd.read_csv(eye_df_filename)
 
+            ## participant trial info
+            pp_trial_info = self.dataObj.trial_info_df[self.dataObj.trial_info_df['sj'] == 'sub-{pp}'.format(pp = pp)]
 
             ## select only correct trials for participant
             pp_manual_response_df = df_manual_responses[(df_manual_responses['correct_response'] == 1) & \
@@ -384,12 +422,39 @@ class EyeTrackVsearch(EyeTrack):
                                                         (pp_manual_response_df['set_size'] == ss)].trial_num.values
                 
                         for t in blk_trials:
-                
-                            trl_fix_dur = all_fixation_df[(all_fixation_df['block_num'] == blk) & \
-                                                        (all_fixation_df['trial'] == t)].dur_in_sec.values
 
-                            dur = np.nanmean(trl_fix_dur) # mean duration
-                            fix = len(trl_fix_dur) #  number of fixations in each trial
+                            ## fixations for this trial
+                            trl_fix_df = all_fixation_df[(all_fixation_df['block_num'] == blk) & \
+                                                        (all_fixation_df['trial'] == t)]
+
+                            # if no fixations on trial to begin with
+                            if trl_fix_df.empty:
+                                dur = np.nan
+                                fix = 0
+                            else:
+                                if exclude_target_fix: # if we want to exclude fixations on target
+                                    ## get target coordinates
+                                    target_pos = pp_trial_info[(pp_trial_info['block'] == blk) & \
+                                                            (pp_trial_info['index'] == t)].target_pos.values[0]
+
+                                    # get x,y coordinates of last fixation
+                                    fix_x = trl_fix_df.iloc[-1]['x_pos'] - self.hRes/2 # start x pos
+                                    fix_y = trl_fix_df.iloc[-1]['y_pos'] - self.vRes/2; fix_y = -fix_y #start y pos
+                                    
+                                    # if fixation on target, remove
+                                    if ((target_pos[0] - fix_x)**2 + (target_pos[-1] - fix_y)**2) <= self.r_gabor ** 2:
+                                        trl_fix_df = trl_fix_df.iloc[:-1] 
+
+                                # if no fixations in trial
+                                if trl_fix_df.empty:
+                                    dur = np.nan
+                                    fix = 0
+                                else:
+                                    # get fixation duration
+                                    trl_fix_dur = trl_fix_df.dur_in_sec.values
+
+                                    dur = np.nanmean(trl_fix_dur) # mean duration
+                                    fix = len(trl_fix_dur) #  number of fixations in each trial
 
                             # append in dataframe
                             df_trl_fixations = pd.concat((df_trl_fixations,

@@ -139,7 +139,7 @@ if task == 'both':
                                                 cs_max_thresh = data_crowding.params['crowding']['cs_max_thresh'])
 
         # get mean number of fixations for search
-        eye_search.get_search_mean_fixations(df_manual_responses = search_behaviour.df_manual_responses)
+        eye_search.get_search_mean_fixations(df_manual_responses = search_behaviour.df_manual_responses, exclude_target_fix = True)
 
         ### plot correlations of Fixations with CS
         eye_plotter.plot_correlations_Fix_CS(df_CS = crowding_behaviour.df_CS, 
@@ -148,7 +148,7 @@ if task == 'both':
                                                 save_fig = True, outdir = plot_dir)
 
         # get fixations for all trials
-        eye_search.get_search_trl_fixations(df_manual_responses = search_behaviour.df_manual_responses)
+        eye_search.get_search_trl_fixations(df_manual_responses = search_behaviour.df_manual_responses, exclude_target_fix = True)
 
         # get number of fixations per item (slope)
         df_search_fix_slopes = eye_search.get_fix_slopes(eye_search.df_trl_fixations.dropna(), fix_nr = True)
@@ -182,9 +182,9 @@ elif task == 'search':
     elif py_cmd == 'fix':
 
         # get mean number of fixations for search
-        eye_search.get_search_mean_fixations(df_manual_responses = search_behaviour.df_manual_responses)
+        eye_search.get_search_mean_fixations(df_manual_responses = search_behaviour.df_manual_responses, exclude_target_fix = True)
         # and for all trials
-        eye_search.get_search_trl_fixations(df_manual_responses = search_behaviour.df_manual_responses)
+        eye_search.get_search_trl_fixations(df_manual_responses = search_behaviour.df_manual_responses, exclude_target_fix = True)
 
         # plot
         eye_plotter.plot_fixations_search(df_trl_fixations = eye_search.df_trl_fixations,
