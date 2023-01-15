@@ -6,6 +6,7 @@ import seaborn as sns
 import yaml
 
 from sklearn.linear_model import LinearRegression
+import scipy
 
 class BehResponses:
     
@@ -46,7 +47,7 @@ class BehResponses:
         return new_df
 
     
-    def get_RTs(self, missed_trl_thresh = .25):
+    def get_RTs(self, missed_trl_thresh = .25, exclude_outliers = False, threshold_std = 3, threshold_sec = .250):
         
         """
         Given subject reponses and trial info, 
@@ -218,6 +219,11 @@ class BehResponses:
                             # save reaction time value
                             rt = ev_df[ev_df['event_type'] == 'response']['onset'].values[0] - ev_df[ev_df['event_type'] == 'stim']['onset'].values[0]
 
+                            # if rt too low, exclude
+                            if rt <= threshold_sec:
+                                rt = np.nan
+                                correct_response = np.nan
+
                             # save dataframe
                             df_manual_responses = pd.concat([df_manual_responses, 
                                                     pd.DataFrame({'sj': ['sub-{sj}'.format(sj = pp)],  
@@ -251,7 +257,61 @@ class BehResponses:
                     print('EXCLUDE')
                     self.exclude_sj_bool['sub-{sj}'.format(sj = pp)] = True
 
-        self.df_manual_responses = df_manual_responses
+        ## if we want to exclude trial outliers (RT too long or fast)
+        if exclude_outliers:
+            self.df_manual_responses = self.exclude_search_outlier_trials(df_manual_responses, threshold_std = threshold_std)
+        else:
+            self.df_manual_responses = df_manual_responses
+
+
+    def exclude_search_outlier_trials(self, df_manual_responses, threshold_std = 3):
+
+        """helper function to
+        exclude trials that have a RT of more than X standard deviation from the mean
+        Note - assumes data has a normal distribution
+        """
+
+        clean_manual_responses = pd.DataFrame([])
+
+        ## loop over subjects
+        for pp in self.dataObj.sj_num:
+
+            print('checking outlier reaction times for search task of sub-{sj}'.format(sj = pp))
+
+            # loop over ecc
+            for e in self.dataObj.ecc:
+                
+                for ss in self.dataObj.set_size:
+                    
+                    # sub select dataframe for specific set size and ecc
+                    df_e_ss = df_manual_responses[(df_manual_responses['target_ecc'] == e) & \
+                                            (df_manual_responses['set_size'] == ss) & \
+                                            (df_manual_responses['correct_response'] == 1) & \
+                                            (df_manual_responses['sj'] == 'sub-{sj}'.format(sj = pp))]
+
+                    # calculate mean RT for ecc and set size, and define outlier threshold value
+                    all_rt = df_e_ss.RT.values
+
+                    upper_thresh = np.nanmean(all_rt) + threshold_std * np.std(all_rt)
+                    lower_thresh = np.nanmean(all_rt) - threshold_std * np.std(all_rt)
+
+                    # first concatenate incorrect responses
+                    clean_manual_responses = pd.concat((clean_manual_responses,  
+                                                        df_manual_responses[(df_manual_responses['target_ecc'] == e) & \
+                                                        (df_manual_responses['set_size'] == ss) & \
+                                                        (df_manual_responses['correct_response'] != 1) & \
+                                                        (df_manual_responses['sj'] == 'sub-{sj}'.format(sj = pp))]), ignore_index=True)
+
+                    # then concatenate dataframe rows that are not outliers
+                    for index,row in df_e_ss.iterrows():
+                        if (row.RT > upper_thresh) or (row.RT < lower_thresh):
+                            row['RT'] = np.nan
+                            row['correct_response'] = np.nan
+                        clean_manual_responses = pd.concat((clean_manual_responses,  
+                                                            pd.DataFrame(dict(row),index=[0])), ignore_index=True)
+                    
+
+        return clean_manual_responses
         
         
     def get_meanRT(self, df_manual_responses, acc_set_thresh = .75, acc_total_thresh = .85):
@@ -479,6 +539,32 @@ class BehResponses:
 
         self.df_CS = df_CS
 
+    
+    def combine_CS_df(self, df_CS):
+
+        """
+        Helper function to combine CS values
+        in a same dataframe, in format that allows for across subject correlation
+
+        """
+
+        # build tidy dataframe with relevant info
+        corr_df4plotting = pd.DataFrame([])
+
+        # loop over subjects
+        for _, pp in enumerate(df_CS.sj.unique()):
+            
+            tmp_df = df_CS[(df_CS['sj'] == pp)]
+            
+            corr_df4plotting = pd.concat((corr_df4plotting,
+                                        pd.DataFrame({'sj': [pp],
+                                                        'orientation': tmp_df[tmp_df['crowding_type'] == 'orientation'].critical_spacing.values,
+                                                        'color': tmp_df[tmp_df['crowding_type'] == 'color'].critical_spacing.values,
+                                                        'conjunction': tmp_df[tmp_df['crowding_type'] == 'conjunction'].critical_spacing.values
+                                        })), ignore_index = True)
+    
+        return corr_df4plotting
+
 
     def get_search_slopes(self, df_manual_responses):
 
@@ -520,4 +606,88 @@ class BehResponses:
                                                             'intercept': [regressor.intercept_[0]]})])
 
         self.df_search_slopes = df_search_slopes 
+
+
+    def make_search_CS_corr_2Dmatrix(self, corr_df4plotting, method = 'pearson'):
+
+        """
+        Helper function to make a correlation matrix,
+        That summarizes info in dataframe that can be used for heatmap plotting
+
+        Note - corr_df4plotting should have column names x_val and y_val for each set size and ecc,
+        and those will be correlated. This allow for func to be used in several cases
+        """
+
+        corr_df = pd.DataFrame([])
+        pval_df = pd.DataFrame([])
+
+        for e_ind, ecc in enumerate(self.dataObj.ecc):
+            
+            tmp_corr_df = pd.DataFrame([])
+            tmp_pval_df = pd.DataFrame([])
+            
+            for ss_ind, ss in enumerate(self.dataObj.set_size):
+
+                if method == 'pearson':
+                    rho, pval = scipy.stats.pearsonr(corr_df4plotting[(corr_df4plotting['target_ecc'] == ecc) & \
+                                    (corr_df4plotting['set_size'] == ss)].y_val.values, 
+                                        corr_df4plotting[(corr_df4plotting['target_ecc'] == ecc) & \
+                                    (corr_df4plotting['set_size'] == ss)].x_val.values)
+                elif method == 'spearman':
+                    rho, pval = scipy.stats.spearmanr(corr_df4plotting[(corr_df4plotting['target_ecc'] == ecc) & \
+                                    (corr_df4plotting['set_size'] == ss)].y_val.values, 
+                                        corr_df4plotting[(corr_df4plotting['target_ecc'] == ecc) & \
+                                    (corr_df4plotting['set_size'] == ss)].x_val.values)
+                
+                tmp_corr_df = pd.concat((tmp_corr_df,
+                                    pd.DataFrame([rho], 
+                                                index=['{ss} items'.format(ss=ss)], 
+                                                columns=['{ee} ecc'.format(ee=ecc)])
+                                    ),axis=0)
+                tmp_pval_df = pd.concat((tmp_pval_df,
+                                    pd.DataFrame([pval], 
+                                                index=['{ss} items'.format(ss=ss)], 
+                                                columns=['{ee} ecc'.format(ee=ecc)])
+                                    ),axis=0)
+            
+            corr_df =  pd.concat((corr_df,tmp_corr_df),axis=1)
+            pval_df =  pd.concat((pval_df,tmp_pval_df),axis=1)
+
+        return corr_df, pval_df
+
+
+    def make_search_CS_corr_1Dmatrix(self, corr_df4plotting, method = 'pearson'):
+
+        """
+        Helper function to make a correlation matrix,
+        That summarizes info in dataframe that can be used for heatmap plotting
+
+        Note - corr_df4plotting should have column names x_val and y_val for each set size and ecc,
+        and those will be correlated. This allow for func to be used in several cases
+        """
+
+        corr_df = pd.DataFrame([])
+        pval_df = pd.DataFrame([])
+
+        for e_ind, ecc in enumerate(self.dataObj.ecc):
+
+            if method == 'pearson':
+                rho, pval = scipy.stats.pearsonr(corr_df4plotting[(corr_df4plotting['target_ecc'] == ecc)].y_val.values, 
+                                    corr_df4plotting[(corr_df4plotting['target_ecc'] == ecc)].x_val.values)
+            elif method == 'spearman':
+                rho, pval = scipy.stats.spearmanr(corr_df4plotting[(corr_df4plotting['target_ecc'] == ecc)].y_val.values, 
+                                    corr_df4plotting[(corr_df4plotting['target_ecc'] == ecc)].x_val.values)
+        
+            corr_df = pd.concat((corr_df,
+                             pd.DataFrame([rho], 
+                                          columns=['{ee} ecc'.format(ee=ecc)])
+                            ),axis=1)
+            pval_df = pd.concat((pval_df,
+                                    pd.DataFrame([pval], 
+                                                columns=['{ee} ecc'.format(ee=ecc)])
+                                    ),axis=1)
+
+        return corr_df, pval_df
+
+
 

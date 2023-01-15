@@ -109,7 +109,7 @@ crowding:
 
   max_pos_jitter: 0.5 # for flankers, horizontal jitter (in dva)
 
-  cs_trial_ratio: .5 # ratio of flanker trials to use for CS calculation
+  cs_trial_ratio: .6 #.5 # ratio of flanker trials to use for CS calculation
 
   missed_trl_thresh: .25
   noflank_acc_thresh: .3

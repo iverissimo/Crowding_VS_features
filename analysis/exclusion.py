@@ -22,7 +22,8 @@ class CheckData:
         """
 
         # get search RTs for all trials
-        self.SearchObj.get_RTs(missed_trl_thresh = self.SearchObj.dataObj.params['visual_search']['missed_trl_thresh'])
+        self.SearchObj.get_RTs(missed_trl_thresh = self.SearchObj.dataObj.params['visual_search']['missed_trl_thresh'],
+                                exclude_outliers = True, threshold_std = 3)
 
         # get search mean RT and accuracy
         self.SearchObj.get_meanRT(df_manual_responses = self.SearchObj.df_manual_responses,

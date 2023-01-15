@@ -47,6 +47,7 @@ CLI.add_argument("--cmd",
 CLI.add_argument("--ses_type",
                 #nargs="*",
                 type=str,  # any type/callable can be used here
+                default='test',
                 required=False,
                 help = 'Which session type (train/test). Default test'
                 )
@@ -56,7 +57,7 @@ args = CLI.parse_args()
 
 # access CLI options
 participant = args.subject[0].zfill(3) if len(args.subject) == 1 else args.subject # for situation where 1 sj vs list
-ses_type = args.ses_type if args.ses_type is not None else 'test' # session to analyze (test vs train)
+ses_type = args.ses_type # session to analyze (test vs train)
 task = args.task
 py_cmd = args.cmd
 
@@ -97,7 +98,8 @@ if task == 'both':
         os.makedirs(plot_dir, exist_ok=True)
 
         # get search RTs for all trials
-        search_behaviour.get_RTs(missed_trl_thresh = data_search.params['visual_search']['missed_trl_thresh'])
+        search_behaviour.get_RTs(missed_trl_thresh = data_search.params['visual_search']['missed_trl_thresh'], 
+                                exclude_outliers = True, threshold_std = 3)
 
         # get mean RT and accuracy
         search_behaviour.get_meanRT(df_manual_responses = search_behaviour.df_manual_responses,
@@ -115,14 +117,27 @@ if task == 'both':
                                                 crowding_type_list = data_crowding.crwd_type,
                                                 save_fig = True, outdir = plot_dir)
 
+        ### plot Person correlations of mean RT with CS in heatmap
+        search_plotter.plot_correlations_RT_CS_heatmap(df_CS = crowding_behaviour.df_CS, 
+                                                df_mean_results = search_behaviour.df_mean_results, 
+                                                crowding_type_list = data_crowding.crwd_type,
+                                                save_fig = True, outdir = plot_dir,
+                                                method = 'pearson')
+
         # get search slopes
         search_behaviour.get_search_slopes(df_manual_responses = search_behaviour.df_manual_responses)
 
-        ### plot correlations of mean RT with CS
+        ### plot correlations of mean RT slope with CS
         search_plotter.plot_correlations_slopeRT_CS(df_CS = crowding_behaviour.df_CS, 
                                                     df_search_slopes = search_behaviour.df_search_slopes, 
                                                     crowding_type_list = data_crowding.crwd_type,
                                                     save_fig = True, outdir = plot_dir)
+
+        search_plotter.plot_correlations_slopeRT_CS_heatmap(df_CS = crowding_behaviour.df_CS, 
+                                                    df_search_slopes = search_behaviour.df_search_slopes, 
+                                                    crowding_type_list = data_crowding.crwd_type,
+                                                    save_fig = True, outdir = plot_dir,
+                                                    method = 'pearson')
 
     elif py_cmd == 'correlations_Fix':
 
@@ -131,7 +146,8 @@ if task == 'both':
         os.makedirs(plot_dir, exist_ok=True)
 
         # get search RTs for all trials
-        search_behaviour.get_RTs(missed_trl_thresh = data_search.params['visual_search']['missed_trl_thresh'])
+        search_behaviour.get_RTs(missed_trl_thresh = data_search.params['visual_search']['missed_trl_thresh'],
+                                exclude_outliers = True, threshold_std = 3)
 
         # get critical spacing for crowding
         crowding_behaviour.get_critical_spacing(num_trials = data_crowding.nr_trials_flank * data_crowding.ratio_trls_cs,
@@ -147,6 +163,13 @@ if task == 'both':
                                                 crowding_type_list = data_crowding.crwd_type,
                                                 save_fig = True, outdir = plot_dir)
 
+        ### plot Person correlations of Fixations with CS in heatmap
+        eye_plotter.plot_correlations_Fix_CS_heatmap(df_CS = crowding_behaviour.df_CS, 
+                                                df_mean_fixations = eye_search.df_mean_fixations, 
+                                                crowding_type_list = data_crowding.crwd_type,
+                                                save_fig = True, outdir = plot_dir,
+                                                method = 'pearson', BehObj = search_behaviour)
+
         # get fixations for all trials
         eye_search.get_search_trl_fixations(df_manual_responses = search_behaviour.df_manual_responses, exclude_target_fix = True)
 
@@ -159,10 +182,18 @@ if task == 'both':
                                                 crowding_type_list = data_crowding.crwd_type,
                                                 save_fig = True, outdir = plot_dir)
 
+        ### plot Person correlations of number of fixations per item with CS in heatmap
+        eye_plotter.plot_correlations_slopeNumFix_CS_heatmap(df_CS = crowding_behaviour.df_CS,  
+                                                df_search_fix_slopes = df_search_fix_slopes, 
+                                                crowding_type_list = data_crowding.crwd_type,
+                                                save_fig = True, outdir = plot_dir,
+                                                method = 'pearson', BehObj = search_behaviour)
+
 elif task == 'search':
     
     # get RTs for all trials
-    search_behaviour.get_RTs(missed_trl_thresh = data_search.params['visual_search']['missed_trl_thresh'])
+    search_behaviour.get_RTs(missed_trl_thresh = data_search.params['visual_search']['missed_trl_thresh'],
+                            exclude_outliers = True, threshold_std = 3)
 
     if py_cmd == 'RT':
     
@@ -253,6 +284,10 @@ elif task == 'crowding':
         # plot
         crwd_plotter.plot_critical_spacing(crowding_behaviour.df_CS, save_fig = True)
         crwd_plotter.plot_staircases(save_fig = True)
+
+        crwd_plotter.plot_CS_types_correlation(df_CS = crowding_behaviour.df_CS, save_fig = True)
+
+
 
 
 # ### STATS ###

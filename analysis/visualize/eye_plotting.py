@@ -433,4 +433,141 @@ class PlotsEye:
                                                                                                         ses = self.dataObj.session,
                                                                                                         ct = crowding_type)))
 
+                                                                                                        
+    def plot_correlations_Fix_CS_heatmap(self, df_CS = None, df_mean_fixations = None, 
+                                        method = 'pearson', BehObj = None,
+                                        crowding_type_list = ['orientation', 'color', 'conjunction'],
+                                        save_fig = True, outdir = None):
+        
+        """ plot correlations between mean number of fixations and CS
+        
+        Parameters
+        ----------
+        save_fig : bool
+            save figure in output dir
+            
+        """
+        
+        # plot for each crowding type separately 
+
+        for crowding_type in crowding_type_list:
+
+            # build tidy dataframe with relevant info
+            corr_df4plotting = pd.DataFrame([])
+
+            # loop over subjects
+            for _, pp in enumerate(self.dataObj.sj_num):
+
+                # make temporary dataframe
+                tmp_df = df_mean_fixations[(df_mean_fixations['sj']== 'sub-{s}'.format(s = pp))]
+                tmp_df['critical_spacing'] = df_CS[(df_CS['crowding_type']== crowding_type) & \
+                                    (df_CS['sj']== 'sub-{s}'.format(s = pp))].critical_spacing.values[0]
+                
+                # append
+                corr_df4plotting = pd.concat((corr_df4plotting,
+                                            tmp_df.copy()))
     
+            # get correlation dfs for each case
+            # but need to replace column names
+            
+            corr_df, pval_df = BehObj.make_search_CS_corr_2Dmatrix(corr_df4plotting.rename(columns={'mean_fixations': 'y_val', 
+                                                                                                'critical_spacing': 'x_val'}), 
+                                                                    method = method)
+
+            ## make figure
+            fig, (ax1, ax2) = plt.subplots(1,2, figsize=(9,3), dpi=100, facecolor='w', edgecolor='k')
+
+            sns.heatmap(corr_df, annot=True, cmap='coolwarm', vmin=-.35, vmax=.35, ax=ax1)
+            ax1.set_title('{mt} correlation'.format(mt = method), fontsize = 10)
+
+            sns.heatmap(pval_df, annot=True, vmin=0.00, vmax=0.10, cmap='RdGy', ax=ax2)
+            ax2.set_title('{mt} p-values'.format(mt = method), fontsize = 10)
+
+            if save_fig:
+                fig.savefig(op.join(outdir, 'Nsj-{nr}_ses-{ses}_{mt}_correlations_NumFixations_CS-{ct}_heatmap.png'.format(nr = self.nr_pp,
+                                                                                                        mt = method,
+                                                                                                        ses = self.dataObj.session,
+                                                                                                        ct = crowding_type)))
+
+            ## plot same but for mean fixation duration
+            
+            # get correlation dfs for each case
+            # but need to replace column names
+            
+            corr_df, pval_df = BehObj.make_search_CS_corr_2Dmatrix(corr_df4plotting.rename(columns={'mean_fix_dur': 'y_val', 
+                                                                                                'critical_spacing': 'x_val'}), 
+                                                                    method = method)
+
+            ## make figure
+            fig, (ax1, ax2) = plt.subplots(1,2, figsize=(9,3), dpi=100, facecolor='w', edgecolor='k')
+
+            sns.heatmap(corr_df, annot=True, cmap='coolwarm', vmin=-.35, vmax=.35, ax=ax1)
+            ax1.set_title('{mt} correlation'.format(mt = method), fontsize = 10)
+
+            sns.heatmap(pval_df, annot=True, vmin=0.00, vmax=0.10, cmap='RdGy', ax=ax2)
+            ax2.set_title('{mt} p-values'.format(mt = method), fontsize = 10)
+
+            if save_fig:
+                fig.savefig(op.join(outdir, 'Nsj-{nr}_ses-{ses}_{mt}_correlations_DurFixations_CS-{ct}_heatmap.png'.format(nr = self.nr_pp,
+                                                                                                        mt = method,
+                                                                                                        ses = self.dataObj.session,
+                                                                                                        ct = crowding_type)))
+
+
+    def plot_correlations_slopeNumFix_CS_heatmap(self, df_CS = None, df_search_fix_slopes = None, 
+                                                    method = 'pearson', BehObj = None,
+                                                    crowding_type_list = ['orientation', 'color', 'conjunction'],
+                                                    save_fig = True, outdir = None):
+                    
+        """ plot correlations between num fixations SLOPEs and CS
+        
+        Parameters
+        ----------
+        save_fig : bool
+            save figure in output dir
+            
+        """
+        
+        # plot for each crowding type separately 
+
+        for crowding_type in crowding_type_list:
+
+            # build tidy dataframe with relevant info
+            corr_slope_df4plotting = pd.DataFrame([])
+
+            # loop over subjects
+            for _, pp in enumerate(self.dataObj.sj_num):
+
+                # make temporary dataframe
+                tmp_df = df_search_fix_slopes[(df_search_fix_slopes['sj']== 'sub-{s}'.format(s = pp))]
+                tmp_df['critical_spacing'] = df_CS[(df_CS['crowding_type']== crowding_type) & \
+                                            (df_CS['sj']== 'sub-{s}'.format(s = pp))].critical_spacing.values[0]
+                
+                # append
+                corr_slope_df4plotting = pd.concat((corr_slope_df4plotting,
+                                            tmp_df.copy()))
+
+
+            # get correlation dfs for each case
+            # but need to replace column names
+            
+            corr_df, pval_df = BehObj.make_search_CS_corr_1Dmatrix(corr_slope_df4plotting.rename(columns={'slope': 'y_val', 
+                                                                                                        'critical_spacing': 'x_val'}), 
+                                                                    method = method)
+
+            ## make figure
+            fig, (ax1, ax2) = plt.subplots(1,2, figsize=(9,1), dpi=100, facecolor='w', edgecolor='k')
+
+            sns.heatmap(corr_df, annot=True, cmap='coolwarm', vmin=-.35, vmax=.35, ax=ax1, 
+                        yticklabels=[])
+            ax1.set_title('{mt} correlation'.format(mt = method), fontsize = 10)
+
+            sns.heatmap(pval_df, annot=True, vmin=0.00, vmax=0.10, cmap='RdGy', ax=ax2,
+                        yticklabels=[])
+            ax2.set_title('{mt} p-values'.format(mt = method), fontsize = 10)
+
+            if save_fig:
+                fig.savefig(op.join(outdir, 'Nsj-{nr}_ses-{ses}_{mt}_correlations_NumFixationsSlope_CS-{ct}_heatmap.png'.format(nr = self.nr_pp,
+                                                                                                        mt = method,
+                                                                                                        ses = self.dataObj.session,
+                                                                                                        ct = crowding_type)))

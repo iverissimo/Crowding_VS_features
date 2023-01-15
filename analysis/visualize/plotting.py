@@ -587,3 +587,196 @@ class PlotsBehavior:
                 g.savefig(op.join(outdir, 'Nsj-{nr}_ses-{ses}_correlations_SearchSlopeRT_CS-{ct}.png'.format(nr = self.nr_pp,
                                                                                                         ses = self.BehObj.dataObj.session,
                                                                                                         ct = crowding_type)))
+
+
+    def plot_CS_types_correlation(self, df_CS = None, save_fig = True):
+
+        """ plot correlations between different CS types
+        
+        Parameters
+        ----------
+        save_fig : bool
+            save figure in output dir
+            
+        """
+
+        # organize CS values in tidy DF
+        corr_df4plotting = self.BehObj.combine_CS_df(df_CS)
+
+        # COLOR vs ORIENTATION CS
+        g = sns.lmplot(data = corr_df4plotting, x = 'color', y = 'orientation', height = 5)
+
+        rho, pval = scipy.stats.spearmanr(corr_df4plotting.color.values, 
+                                        corr_df4plotting.orientation.values)
+        g.axes[0][0].text(.2, .7, 
+                                'rho = %.2f \np-value = %.3f'%(rho,pval), 
+                                horizontalalignment='left')
+
+        # axis labels
+        g.set_axis_labels('Color CS','Orientation CS', fontsize = 10, labelpad=15)
+        g.axes[0][0].set(xlim=(.15, .75), ylim=(.15, .75))
+
+        if save_fig:
+            g.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_correlations_CS-color_orientation.png'.format(nr = self.nr_pp,
+                                                                                                    ses = self.BehObj.dataObj.session
+                                                                                                    )))
+
+        # COLOR vs CONJUNCTION CS   
+        g = sns.lmplot(data = corr_df4plotting, x = 'color', y = 'conjunction', height = 5)
+
+        rho, pval = scipy.stats.spearmanr(corr_df4plotting.color.values, 
+                                        corr_df4plotting.conjunction.values)
+        g.axes[0][0].text(.2, .7, 
+                                'rho = %.2f \np-value = %.3f'%(rho,pval), 
+                                horizontalalignment='left')
+
+        # axis labels
+        g.set_axis_labels('Color CS','Conjunction CS', fontsize = 10, labelpad=15)
+        g.axes[0][0].set(xlim=(.15, .75), ylim=(.15, .75))
+
+        if save_fig:
+            g.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_correlations_CS-color_conjunction.png'.format(nr = self.nr_pp,
+                                                                                                    ses = self.BehObj.dataObj.session
+                                                                                                    )))
+
+        # ORIENTATION vs CONJUNCTION CS   
+        g = sns.lmplot(data = corr_df4plotting, x = 'conjunction', y = 'orientation', height = 5)
+
+        rho, pval = scipy.stats.spearmanr(corr_df4plotting.conjunction.values, 
+                                        corr_df4plotting.orientation.values)
+        g.axes[0][0].text(.2, .7, 
+                                'rho = %.2f \np-value = %.3f'%(rho,pval), 
+                                horizontalalignment='left')
+
+        # axis labels
+        g.set_axis_labels('Conjunction CS','Orientation CS', fontsize = 10, labelpad=15)
+        g.axes[0][0].set(xlim=(.15, .75), ylim=(.15, .75))
+
+        if save_fig:
+            g.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_correlations_CS-orientation_conjunction.png'.format(nr = self.nr_pp,
+                                                                                                    ses = self.BehObj.dataObj.session
+                                                                                                    )))
+
+        # Getting the Upper Triangle of the co-relation matrix
+        #matrix = np.triu(corr_df4plotting.corr())
+        w = sns.heatmap(corr_df4plotting.corr(method = 'spearman'), 
+                    xticklabels=corr_df4plotting.corr().columns.values,
+                    yticklabels=corr_df4plotting.corr().columns.values,
+                    annot=True, cmap='Reds', vmin=0.6, vmax=1)#, mask=matrix)
+
+        if save_fig:
+            w.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_correlations_CS-heatmap.png'.format(nr = self.nr_pp,
+                                                                                                    ses = self.BehObj.dataObj.session
+                                                                                                    )))      
+
+
+    def plot_correlations_RT_CS_heatmap(self, df_CS = None, df_mean_results = None, method = 'pearson',
+                                        crowding_type_list = ['orientation', 'color', 'conjunction'],
+                                        save_fig = True, outdir = None):
+        
+        """ plot correlations between search reaction times and CS
+        
+        Parameters
+        ----------
+        save_fig : bool
+            save figure in output dir
+            
+        """
+        
+        # plot for each crowding type separately 
+
+        for crowding_type in crowding_type_list:
+
+            # build tidy dataframe with relevant info
+            corr_df4plotting = pd.DataFrame([])
+
+            # loop over subjects
+            for _, pp in enumerate(self.BehObj.dataObj.sj_num):
+
+                # make temporary dataframe
+                tmp_df = df_mean_results[(df_mean_results['sj']== 'sub-{s}'.format(s = pp))]
+                tmp_df['critical_spacing'] = df_CS[(df_CS['crowding_type']== crowding_type) & \
+                                    (df_CS['sj']== 'sub-{s}'.format(s = pp))].critical_spacing.values[0]
+                
+                # append
+                corr_df4plotting = pd.concat((corr_df4plotting,
+                                            tmp_df.copy()))
+
+            # get correlation dfs for each case
+            # but need to replace column names
+            
+            corr_df, pval_df = self.BehObj.make_search_CS_corr_2Dmatrix(corr_df4plotting.rename(columns={'mean_RT': 'y_val', 
+                                                                                                'critical_spacing': 'x_val'}), 
+                                                                    method = method)
+
+            ## make figure
+            fig, (ax1, ax2) = plt.subplots(1,2, figsize=(9,3), dpi=100, facecolor='w', edgecolor='k')
+
+            sns.heatmap(corr_df, annot=True, cmap='coolwarm', vmin=-.35, vmax=.35, ax=ax1)
+            ax1.set_title('{mt} correlation'.format(mt = method), fontsize = 10)
+
+            sns.heatmap(pval_df, annot=True, vmin=0.00, vmax=0.10, cmap='RdGy', ax=ax2)
+            ax2.set_title('{mt} p-values'.format(mt = method), fontsize = 10)
+
+            if save_fig:
+                fig.savefig(op.join(outdir, 'Nsj-{nr}_ses-{ses}_{mt}_correlations_SearchRT_CS-{ct}_heatmap.png'.format(nr = self.nr_pp,
+                                                                                                        mt = method,
+                                                                                                        ses = self.BehObj.dataObj.session,
+                                                                                                        ct = crowding_type)))
+
+    def plot_correlations_slopeRT_CS_heatmap(self, df_CS = None, df_search_slopes = None, method = 'pearson',
+                                                crowding_type_list = ['orientation', 'color', 'conjunction'],
+                                                save_fig = True, outdir = None):
+        
+        """ plot correlations between search reaction times SLOPEs and CS
+        
+        Parameters
+        ----------
+        save_fig : bool
+            save figure in output dir
+            
+        """
+        
+        # plot for each crowding type separately 
+
+        for crowding_type in crowding_type_list:
+
+            # build tidy dataframe with relevant info
+            corr_slope_df4plotting = pd.DataFrame([])
+
+            # loop over subjects
+            for _, pp in enumerate(self.BehObj.dataObj.sj_num):
+
+                # make temporary dataframe
+                tmp_df = df_search_slopes[(df_search_slopes['sj']== 'sub-{s}'.format(s = pp))]
+                tmp_df['critical_spacing'] = df_CS[(df_CS['crowding_type']== crowding_type) & \
+                                            (df_CS['sj']== 'sub-{s}'.format(s = pp))].critical_spacing.values[0]
+                
+                # append
+                corr_slope_df4plotting = pd.concat((corr_slope_df4plotting,
+                                            tmp_df.copy()))
+
+
+            # get correlation dfs for each case
+            # but need to replace column names
+            
+            corr_df, pval_df = self.BehObj.make_search_CS_corr_1Dmatrix(corr_slope_df4plotting.rename(columns={'slope': 'y_val', 
+                                                                                                            'critical_spacing': 'x_val'}), 
+                                                                    method = method)
+
+            ## make figure
+            fig, (ax1, ax2) = plt.subplots(1,2, figsize=(9,1), dpi=100, facecolor='w', edgecolor='k')
+
+            sns.heatmap(corr_df, annot=True, cmap='coolwarm', vmin=-.35, vmax=.35, ax=ax1, 
+                        yticklabels=[])
+            ax1.set_title('{mt} correlation'.format(mt = method), fontsize = 10)
+
+            sns.heatmap(pval_df, annot=True, vmin=0.00, vmax=0.10, cmap='RdGy', ax=ax2,
+                        yticklabels=[])
+            ax2.set_title('{mt} p-values'.format(mt = method), fontsize = 10)
+
+            if save_fig:
+                fig.savefig(op.join(outdir, 'Nsj-{nr}_ses-{ses}_{mt}_correlations_SearchSlopeRT_CS-{ct}_heatmap.png'.format(nr = self.nr_pp,
+                                                                                                        mt = method,
+                                                                                                        ses = self.BehObj.dataObj.session,
+                                                                                                        ct = crowding_type)))

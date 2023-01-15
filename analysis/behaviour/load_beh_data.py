@@ -53,7 +53,8 @@ class BehTask:
             self.exclude_sj = [str(s).zfill(3) for s in exclude_sj]
 
         else:
-            raise ValueError('No exclusion file in derivatives dir, please run check_exclusion command')
+            print('No exclusion file in derivatives dir, please run check_exclusion command')
+            self.exclude_sj = []
             
         ## set sj number list
         # if we want all participants in sourcedata folder

@@ -256,7 +256,7 @@ class EyeTrackVsearch(EyeTrack):
         self.convert2asc()
 
     
-    def get_search_mean_fixations(self, df_manual_responses = None, exclude_target_fix = True):
+    def get_search_mean_fixations(self, df_manual_responses = None, exclude_target_fix = True, sampling_rate = 1000, min_fix_start = .150):
 
         """ 
         Get mean number of fixations and mean fixation durations
@@ -281,7 +281,7 @@ class EyeTrackVsearch(EyeTrack):
             if not op.isfile(eye_df_filename):
                 print('Getting eye events for sub-{sj}'.format(sj = pp))
                 eye_events_df = self.get_eyelink_events(self.EYEevents_files['sub-{sj}'.format(sj = pp)], 
-                                                        sampling_rate = 1000, 
+                                                        sampling_rate = sampling_rate, 
                                                         save_as = eye_df_filename)
             else:
                 print('Loading %s'%eye_df_filename)
@@ -346,6 +346,9 @@ class EyeTrackVsearch(EyeTrack):
                                     dur.append(np.nan)
                                     fix.append(0)
                                 else:
+                                    # also remove fixations that are too quick
+                                    trl_fix_df = trl_fix_df[(trl_fix_df['ev_start_sample'] > (min_fix_start * sampling_rate) + trl_fix_df['phase_start_sample'].values[0])]
+
                                     # get fixation duration
                                     trl_fix_dur = trl_fix_df.dur_in_sec.values
 
@@ -363,7 +366,7 @@ class EyeTrackVsearch(EyeTrack):
         self.df_mean_fixations = df_mean_fixations
 
 
-    def get_search_trl_fixations(self, df_manual_responses = None, exclude_target_fix = True):
+    def get_search_trl_fixations(self, df_manual_responses = None, exclude_target_fix = True, sampling_rate = 1000, min_fix_start = .150):
 
         """ 
         Get number of fixations and mean fixation durations
@@ -388,7 +391,7 @@ class EyeTrackVsearch(EyeTrack):
             if not op.isfile(eye_df_filename):
                 print('Getting eye events for sub-{sj}'.format(sj = pp))
                 eye_events_df = self.get_eyelink_events(self.EYEevents_files['sub-{sj}'.format(sj = pp)], 
-                                                        sampling_rate = 1000, 
+                                                        sampling_rate = sampling_rate, 
                                                         save_as = eye_df_filename)
             else:
                 print('Loading %s'%eye_df_filename)
@@ -450,6 +453,9 @@ class EyeTrackVsearch(EyeTrack):
                                     dur = np.nan
                                     fix = 0
                                 else:
+                                    # also remove fixations that are too quick
+                                    trl_fix_df = trl_fix_df[(trl_fix_df['ev_start_sample'] > (min_fix_start * sampling_rate) + trl_fix_df['phase_start_sample'].values[0])]
+
                                     # get fixation duration
                                     trl_fix_dur = trl_fix_df.dur_in_sec.values
 
