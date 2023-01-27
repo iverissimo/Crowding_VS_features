@@ -612,8 +612,99 @@ class EyeTrackVsearch(EyeTrack):
 
         return fix_target, fix_target_color, fix_target_ori
 
+    def get_trl_fixation_feature_selectivity(self, trl_fix_df, pp_trial_info = None, block_num = None, trial_num = None):
 
-    def get_fix_on_features_df(self, df_manual_responses = None):
+        """ 
+        For a specific participant trial,
+        get the number of fixations that fall on distractors
+        with the same color or orientation of target
+        and the nr of fixations on target itself
+        """
+
+        ## get target and distractor positions as strings in list
+        target_pos = pp_trial_info[(pp_trial_info['block'] == block_num) & \
+                                (pp_trial_info['index'] == trial_num)].target_pos.values[0]
+        distr_pos = pp_trial_info[(pp_trial_info['block'] == block_num) & \
+                                (pp_trial_info['index'] == trial_num)].distractor_pos.values[0]
+
+        ## get target and distractor colors 
+        target_color = pp_trial_info[(pp_trial_info['block'] == block_num) & \
+                                (pp_trial_info['index'] == trial_num)].target_color.values[0]
+
+        distr_color = pp_trial_info[(pp_trial_info['block'] == block_num) & \
+                                (pp_trial_info['index'] == trial_num)].distractor_color.values[0]
+
+        ## get target and distractor orientations 
+        target_ori_deg = pp_trial_info[(pp_trial_info['block'] == block_num) & \
+                                (pp_trial_info['index'] == trial_num)].target_ori.values[0]
+        # convert to LR labels
+        target_ori = 'R' if target_ori_deg == self.dataObj.params['stimuli']['ori_deg'] else 'L'
+
+        distr_ori_deg = pp_trial_info[(pp_trial_info['block'] == block_num) & \
+                                (pp_trial_info['index'] == trial_num)].distractor_ori.values[0]
+        # convert to LR labels
+        distr_ori = ['R' if ori == self.dataObj.params['stimuli']['ori_deg'] else 'L' for ori in distr_ori_deg]
+
+        ## append distractor + target position 
+        all_stim_pos = distr_pos + [target_pos]
+
+        # kd-tree for quick nearest-neighbor lookup
+        tree = spatial.KDTree(all_stim_pos)
+        
+        # dict with relevant info 
+        fix_selectivity = {'target': {'nr': 0, 'mean_duration': [], 'mean_distance': []},
+                        'distractor_Tcolor':{'nr': 0, 'mean_duration': [], 'mean_distance': []},
+                        'distractor_Torientation': {'nr': 0, 'mean_duration': [], 'mean_distance': []}}
+
+        # if there were fixations
+        if not trl_fix_df.empty:
+            for _,row in trl_fix_df.iterrows(): # iterate over dataframe
+
+                # make positions compatible with display
+                fx = row['x_pos'] - self.hRes/2 # start x pos
+                fy = row['y_pos'] - self.vRes/2; fy = -fy #start y pos
+
+                # get nearest stim distance and index
+                dist, stim_ind = tree.query([(fx,fy)])
+                
+                # if closest item is not target
+                if stim_ind[0] < len(distr_pos): 
+                    
+                    # if looking at distractor with same orientation as target
+                    if distr_ori[stim_ind[0]] == target_ori: 
+                        fix_selectivity['distractor_Torientation']['nr'] += 1
+                        fix_selectivity['distractor_Torientation']['mean_duration'].append(row['dur_in_sec'])
+                        fix_selectivity['distractor_Torientation']['mean_distance'].append(dist)
+                    
+                    # if looking at distractor with same color as target
+                    if str(distr_color[stim_ind[0]]) == str(target_color): 
+                        fix_selectivity['distractor_Tcolor']['nr'] += 1
+                        fix_selectivity['distractor_Tcolor']['mean_duration'].append(row['dur_in_sec'])
+                        fix_selectivity['distractor_Tcolor']['mean_distance'].append(dist)
+                
+                # fixation on target
+                else:
+                    fix_selectivity['target']['nr'] += 1
+                    fix_selectivity['target']['mean_duration'].append(row['dur_in_sec'])
+                    fix_selectivity['target']['mean_distance'].append(dist)
+
+            # average duration and distance
+            fix_selectivity['distractor_Torientation']['mean_duration'] = np.mean(fix_selectivity['distractor_Torientation']['mean_duration'])
+            fix_selectivity['distractor_Torientation']['mean_distance'] = np.mean(fix_selectivity['distractor_Torientation']['mean_distance'])
+
+            fix_selectivity['distractor_Tcolor']['mean_duration'] = np.mean(fix_selectivity['distractor_Tcolor']['mean_duration'])
+            fix_selectivity['distractor_Tcolor']['mean_distance'] = np.mean(fix_selectivity['distractor_Tcolor']['mean_distance'])
+
+            fix_selectivity['target']['mean_duration'] = np.mean(fix_selectivity['target']['mean_duration'])
+            fix_selectivity['target']['mean_distance'] = np.mean(fix_selectivity['target']['mean_distance'])
+                
+        else: # if no fixations, then return empty
+            fix_selectivity = {}
+
+        return fix_selectivity
+
+
+    def get_fix_on_features_df(self, df_manual_responses = None, exclude_target_fix = True, sampling_rate = 1000, min_fix_start = .150):
 
         """ 
         Get percentage of fixations per trial
@@ -625,8 +716,10 @@ class EyeTrackVsearch(EyeTrack):
 
         # set up empty df
         df_fixations_on_features = pd.DataFrame({'sj': [], 'trial_num': [], 'block_num': [],
-                                        'target_ecc': [], 'set_size': [], 
-                                        'fix_on_target': [], 'fix_on_target_color': [], 'fix_on_target_ori': []})
+                                        'target_ecc': [], 'set_size': [], 'nr_fixations': [], 
+                                    'nr_fix_on_T': [], 'mean_fix_dur_on_T': [], 'mean_fix_dist2T': [],
+                                    'nr_fix_on_DTC': [], 'mean_fix_dur_on_DTC': [], 'mean_fix_dist2DTC': [],
+                                    'nr_fix_on_DTO': [], 'mean_fix_dur_on_DTO': [], 'mean_fix_dist2DTO': []})
 
         ## loop over participants
 
@@ -639,16 +732,26 @@ class EyeTrackVsearch(EyeTrack):
             if not op.isfile(eye_df_filename):
                 print('Getting eye events for sub-{sj}'.format(sj = pp))
                 eye_events_df = self.get_eyelink_events(self.EYEevents_files['sub-{sj}'.format(sj = pp)], 
-                                                        sampling_rate = 1000, 
+                                                        sampling_rate = sampling_rate, 
                                                         save_as = eye_df_filename)
             else:
                 print('Loading %s'%eye_df_filename)
                 eye_events_df = pd.read_csv(eye_df_filename)
 
+            ## participant trial info
+            pp_trial_info = self.dataObj.trial_info_df[self.dataObj.trial_info_df['sj'] == 'sub-{pp}'.format(pp = pp)]
 
             ## select only correct trials for participant
             pp_manual_response_df = df_manual_responses[(df_manual_responses['correct_response'] == 1) & \
                                                         (df_manual_responses['sj'] == 'sub-{sj}'.format(sj = pp))]
+
+            ## select only fixations and times when 
+            # stimuli was displayed
+            all_fixation_df = eye_events_df[(eye_events_df['eye_event'] == 'FIX') & \
+                                        (eye_events_df['phase_name'] == 'stim')]
+
+            # get number of blocks
+            nr_blocks = all_fixation_df.block_num.unique().astype(int)
 
             # loop over ecc
             for e in self.dataObj.ecc:
@@ -656,7 +759,7 @@ class EyeTrackVsearch(EyeTrack):
                 # loop over set size
                 for ss in self.dataObj.set_size:
 
-                    for blk in eye_events_df.block_num.unique().astype(int):
+                    for blk in nr_blocks:
                         # get trial indices for block
                         blk_trials = pp_manual_response_df[(pp_manual_response_df['block_num'] == blk) & \
                                                         (pp_manual_response_df['target_ecc'] == e) & \
@@ -664,23 +767,54 @@ class EyeTrackVsearch(EyeTrack):
                 
                         for t in blk_trials:
 
-                            fix_target_trl, fix_target_color_trl, fix_target_ori_trl = self.get_trl_percent_fix_on_features(eye_events_df, 
-                                                                                                              participant = pp, 
-                                                                                                              block_num = blk, 
-                                                                                                              trial_num = t,
-                                                                                                              hRes = self.dataObj.params['window_extra']['size'][0], 
-                                                                                                              vRes = self.dataObj.params['window_extra']['size'][1])
+                            ## fixations for this trial
+                            trl_fix_df = all_fixation_df[(all_fixation_df['block_num'] == blk) & \
+                                                        (all_fixation_df['trial'] == t)]
 
-                            # append in dataframe
-                            df_fixations_on_features = pd.concat((df_fixations_on_features,
+                            # if fixations on trial and we want to exclude fixations on target
+                            if not trl_fix_df.empty and exclude_target_fix: # if 
+                                    
+                                ## get target coordinates
+                                target_pos = pp_trial_info[(pp_trial_info['block'] == blk) & \
+                                                        (pp_trial_info['index'] == t)].target_pos.values[0]
+
+                                # get x,y coordinates of last fixation
+                                fix_x = trl_fix_df.iloc[-1]['x_pos'] - self.hRes/2 # start x pos
+                                fix_y = trl_fix_df.iloc[-1]['y_pos'] - self.vRes/2; fix_y = -fix_y #start y pos
+                                
+                                # if last fixation on target, remove
+                                if ((target_pos[0] - fix_x)**2 + (target_pos[-1] - fix_y)**2) <= self.r_gabor ** 2:
+                                    trl_fix_df = trl_fix_df.iloc[:-1] 
+
+                            # if fixations on trial  
+                            if not trl_fix_df.empty:
+                                # also remove fixations that are too quick
+                                trl_fix_df = trl_fix_df[(trl_fix_df['ev_start_sample'] > (min_fix_start * sampling_rate) + trl_fix_df['phase_start_sample'].values[0])]
+
+                                # check where trial fixations fall on - call function
+                                fix_selectivity = self.get_trl_fixation_feature_selectivity(trl_fix_df, 
+                                                                            pp_trial_info = pp_trial_info, 
+                                                                            block_num = blk, trial_num = t)
+
+                                if len(fix_selectivity) > 0: # if not empty
+
+                                    df_fixations_on_features = pd.concat((df_fixations_on_features,
                                                         pd.DataFrame({'sj': ['sub-{sj}'.format(sj = pp)],
                                                                     'trial_num': [t], 
                                                                     'block_num': [blk],
                                                                     'target_ecc': [e], 
                                                                     'set_size': [ss], 
-                                                                    'fix_on_target': [fix_target_trl], 
-                                                                    'fix_on_target_color': [fix_target_color_trl],
-                                                                    'fix_on_target_ori': [fix_target_ori_trl]})), ignore_index = True)
+                                                                    'nr_fixations': [fix_selectivity['target']['nr'] + fix_selectivity['distractor_Tcolor']['nr'] + fix_selectivity['distractor_Torientation']['nr']],
+                                                                    'nr_fix_on_T': [fix_selectivity['target']['nr']], 
+                                                                    'mean_fix_dur_on_T': [fix_selectivity['target']['mean_duration']],
+                                                                    'mean_fix_dist2T': [fix_selectivity['target']['mean_distance']],
+                                                                    'nr_fix_on_DTC': [fix_selectivity['distractor_Tcolor']['nr']], 
+                                                                    'mean_fix_dur_on_DTC': [fix_selectivity['distractor_Tcolor']['mean_duration']], 
+                                                                    'mean_fix_dist2DTC': [fix_selectivity['distractor_Tcolor']['mean_distance']],
+                                                                    'nr_fix_on_DTO': [fix_selectivity['distractor_Torientation']['nr']], 
+                                                                    'mean_fix_dur_on_DTO': [fix_selectivity['distractor_Torientation']['mean_duration']], 
+                                                                    'mean_fix_dist2DTO': [fix_selectivity['distractor_Torientation']['mean_distance']]})
+                                                                    ), ignore_index = True)
 
         return df_fixations_on_features
 
