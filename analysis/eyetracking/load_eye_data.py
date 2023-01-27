@@ -818,6 +818,117 @@ class EyeTrackVsearch(EyeTrack):
 
         return df_fixations_on_features
 
+    def get_scanpath_ratio_df(self, df_manual_responses = None, sampling_rate = 1000, min_fix_start = .150):
+
+        """ 
+        Get percentage of fixations per trial
+        that fall on target features
+        """
+
+        # make out dir, to save eye events dataframe
+        os.makedirs(self.outdir, exist_ok=True)
+
+        # set up empty df
+        df_scanpath_ratio = pd.DataFrame({'sj': [], 'trial_num': [], 'block_num': [],
+                                        'target_ecc': [], 'set_size': [], 'nr_fixations': [], 
+                                        'sum_euclidean_dist': [], 'ratio': []})
+
+        ## loop over participants
+
+        for pp in self.dataObj.sj_num:
+
+            ## get all eye events (fixation and saccades)
+
+            eye_df_filename = op.join(self.outdir, 'sub-{sj}_eye_events.csv'.format(sj = pp))
+            
+            if not op.isfile(eye_df_filename):
+                print('Getting eye events for sub-{sj}'.format(sj = pp))
+                eye_events_df = self.get_eyelink_events(self.EYEevents_files['sub-{sj}'.format(sj = pp)], 
+                                                        sampling_rate = sampling_rate, 
+                                                        save_as = eye_df_filename)
+            else:
+                print('Loading %s'%eye_df_filename)
+                eye_events_df = pd.read_csv(eye_df_filename)
+
+            ## participant trial info
+            pp_trial_info = self.dataObj.trial_info_df[self.dataObj.trial_info_df['sj'] == 'sub-{pp}'.format(pp = pp)]
+
+            ## select only correct trials for participant
+            pp_manual_response_df = df_manual_responses[(df_manual_responses['correct_response'] == 1) & \
+                                                        (df_manual_responses['sj'] == 'sub-{sj}'.format(sj = pp))]
+
+            ## select only fixations and times when 
+            # stimuli was displayed
+            all_fixation_df = eye_events_df[(eye_events_df['eye_event'] == 'FIX') & \
+                                        (eye_events_df['phase_name'] == 'stim')]
+
+            # get number of blocks
+            nr_blocks = all_fixation_df.block_num.unique().astype(int)
+
+            # loop over ecc
+            for e in self.dataObj.ecc:
+                
+                # loop over set size
+                for ss in self.dataObj.set_size:
+
+                    for blk in nr_blocks:
+                        # get trial indices for block
+                        blk_trials = pp_manual_response_df[(pp_manual_response_df['block_num'] == blk) & \
+                                                        (pp_manual_response_df['target_ecc'] == e) & \
+                                                        (pp_manual_response_df['set_size'] == ss)].trial_num.values
+                
+                        for t in blk_trials:
+
+                            ## fixations for this trial
+                            trl_fix_df = all_fixation_df[(all_fixation_df['block_num'] == blk) & \
+                                                        (all_fixation_df['trial'] == t)]
+
+                            # if fixations on trial  
+                            if not trl_fix_df.empty:
+                                # also remove fixations that are too quick
+                                trl_fix_df = trl_fix_df[(trl_fix_df['ev_start_sample'] > (min_fix_start * sampling_rate) + trl_fix_df['phase_start_sample'].values[0])]
+
+                                if not trl_fix_df.empty:
+                                    ## get target coordinates
+                                    target_pos = pp_trial_info[(pp_trial_info['block'] == blk) & \
+                                                            (pp_trial_info['index'] == t)].target_pos.values[0]
+
+                                    # get target distance from initial fixation in pixels
+                                    # (Euclidean distance between the fixation cross location and the target)
+                                    target_dist_pix = np.sqrt((target_pos[0] - 0)**2 + (target_pos[-1] - 0)**2)
+
+                                    # now get summed Euclidean distances of the eye movements made while
+                                    # searching for the target
+                                    fix_x = trl_fix_df.iloc[0]['x_pos'] - self.hRes/2 # start x pos
+                                    fix_y = trl_fix_df.iloc[0]['y_pos'] - self.vRes/2; fix_y = -fix_y #start y pos
+
+                                    sum_dist_pix = np.sqrt((fix_x - 0)**2 + (fix_y - 0)**2)
+
+                                    # if more than one fixation made
+                                    if len(trl_fix_df) > 1:
+                                        for f_ind in np.arange(len(trl_fix_df)-1):
+
+                                            fix_x0 = trl_fix_df.iloc[f_ind]['x_pos'] - self.hRes/2 # start x pos
+                                            fix_y0 = trl_fix_df.iloc[f_ind]['y_pos'] - self.vRes/2; fix_y0 = -fix_y0 #start y pos
+
+                                            fix_x1 = trl_fix_df.iloc[f_ind+1]['x_pos'] - self.hRes/2 # start x pos
+                                            fix_y1 = trl_fix_df.iloc[f_ind+1]['y_pos'] - self.vRes/2; fix_y1 = -fix_y1 #start y pos
+
+                                            sum_dist_pix += np.sqrt((fix_x0 - fix_x1)**2 + (fix_y0 - fix_y1)**2)
+
+                                    # concatenate
+                                    df_scanpath_ratio = pd.concat((df_scanpath_ratio,
+                                                                pd.DataFrame({'sj': ['sub-{sj}'.format(sj = pp)],
+                                                                        'trial_num': [t], 
+                                                                        'block_num': [blk],
+                                                                        'target_ecc': [e], 
+                                                                        'set_size': [ss],  
+                                                                        'nr_fixations': [len(trl_fix_df)], 
+                                                                        'sum_euclidean_dist': [sum_dist_pix], 
+                                                                        'ratio': [sum_dist_pix/target_dist_pix]})), ignore_index = True)
+                            
+        return df_scanpath_ratio
+
     
     def get_mean_fix_on_features_df(self, df_fixations_on_features = None):
 
