@@ -16,6 +16,7 @@ import seaborn as sns
 
 from statsmodels.stats.anova import AnovaRM
 from scipy.stats import wilcoxon
+import scipy
 
 
 def dva_per_pix(height_cm = 30, distance_cm = 70, vert_res_pix = 1080):
@@ -895,3 +896,61 @@ def wilcox_pairwise_comp(df, list_keys, p_value = .001, filename = None):
                               'p_val': p_val_all,
                               'significant': sig_bool})
         res_df.to_csv(filename)
+
+
+def permutation_correlations(x, y, method = 'spearman', 
+                            perm_num = 10000, seed=None, p_val_side = 'two-sided'):
+
+    """
+    Does permutation tests for correlations of two variables,
+    returning the permuted corr values and the calculated p-value
+    
+    Parameters
+    ----------
+    x : array
+        data array to be permutated 
+    y: array
+        data array
+    method : str
+        if we want pearson or spearman correlation
+    perm_num: int
+        number of permutations
+    seed: int
+        if provided, will initialize random with specific seed
+    p_val_side: str
+        if we want two-sided (default), or one-sided (then we specify greater vs lesser)
+    """             
+
+    ## observed Correlation
+    if method == 'pearson':
+        rho, pval = scipy.stats.pearsonr(x, y)
+    elif method == 'spearman':
+        rho, pval = scipy.stats.spearmanr(x, y)
+
+    # if we want to use specific seed
+    if seed is not None:
+        np.random.seed(seed)
+
+    ## do permutation
+    
+    test_x = x.copy() # make copy that will be shuffled
+
+    perm_rho = [rho]
+    for i in range(0, perm_num-1):
+        np.random.shuffle(test_x) # shuffle one of the variables
+        
+        # Compute permuted correlations and store 
+        if method == 'pearson':
+            perm_rho.append(scipy.stats.pearsonr(test_x, y)[0])
+        elif method == 'spearman':
+            perm_rho.append(scipy.stats.spearmanr(test_x, y)[0])
+
+    # calculate significance
+    if p_val_side == 'two-sided':
+        pval_perm = len(np.where(np.abs(perm_rho) >= np.abs(rho))[0])/perm_num
+    elif p_val_side == 'greater':
+        pval_perm = len(np.where(perm_rho >= rho)[0])/perm_num
+    elif p_val_side == 'lesser':
+        pval_perm = len(np.where(perm_rho <= rho)[0])/perm_num
+
+    return perm_rho, pval_perm

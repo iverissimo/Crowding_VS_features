@@ -475,7 +475,7 @@ class EyeTrackVsearch(EyeTrack):
         self.df_trl_fixations = df_trl_fixations
 
 
-    def get_fix_slopes(self, df_trl_fixations, fix_nr = True):
+    def get_fix_slopes(self, df_trl_fixations, fix_nr = True, per_ecc = True):
 
         """
         calculate search slopes and intercept per ecc
@@ -484,7 +484,8 @@ class EyeTrackVsearch(EyeTrack):
         ----------
         df_manual_responses : DataFrame
             dataframe with results from get_RTs()
-        
+        per_ecc: bool
+            if we want to get slope per eccentricity or combined over all
         """ 
 
         # set empty df
@@ -495,12 +496,30 @@ class EyeTrackVsearch(EyeTrack):
 
             print('calculating search slopes for sub-{sj}'.format(sj = pp))
 
-            # loop over ecc
-            for e in self.dataObj.ecc: 
+            if per_ecc: # loop over ecc
+                # loop over ecc
+                for e in self.dataObj.ecc: 
 
+                    # sub-select df
+                    df_temp = df_trl_fixations[(df_trl_fixations['sj'] == 'sub-{sj}'.format(sj = pp)) & \
+                                        (df_trl_fixations['target_ecc'] == e)]
+
+                    # fit linear regressor
+                    regressor = LinearRegression()
+                    if fix_nr:
+                        regressor.fit(df_temp[['set_size']], df_temp[['nr_fixations']]) # slope in #fix/item
+                    else:
+                        regressor.fit(df_temp[['set_size']], df_temp[['mean_fix_dur']]*1000) # because we want slope to be in ms/item
+
+                    # save df
+                    df_search_fix_slopes = pd.concat([df_search_fix_slopes, 
+                                                    pd.DataFrame({'sj': ['sub-{sj}'.format(sj = pp)], 
+                                                                'target_ecc': [e],   
+                                                                'slope': [regressor.coef_[0][0]],
+                                                                'intercept': [regressor.intercept_[0]]})])
+            else:
                 # sub-select df
-                df_temp = df_trl_fixations[(df_trl_fixations['sj'] == 'sub-{sj}'.format(sj = pp)) & \
-                                    (df_trl_fixations['target_ecc'] == e)]
+                df_temp = df_trl_fixations[(df_trl_fixations['sj'] == 'sub-{sj}'.format(sj = pp))]
 
                 # fit linear regressor
                 regressor = LinearRegression()
@@ -511,8 +530,7 @@ class EyeTrackVsearch(EyeTrack):
 
                 # save df
                 df_search_fix_slopes = pd.concat([df_search_fix_slopes, 
-                                                pd.DataFrame({'sj': ['sub-{sj}'.format(sj = pp)], 
-                                                            'target_ecc': [e],   
+                                                pd.DataFrame({'sj': ['sub-{sj}'.format(sj = pp)],  
                                                             'slope': [regressor.coef_[0][0]],
                                                             'intercept': [regressor.intercept_[0]]})])
 

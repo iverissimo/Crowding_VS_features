@@ -566,7 +566,7 @@ class BehResponses:
         return corr_df4plotting
 
 
-    def get_search_slopes(self, df_manual_responses):
+    def get_search_slopes(self, df_manual_responses, per_ecc = True):
 
         """
         calculate search slopes and intercept per ecc
@@ -575,7 +575,8 @@ class BehResponses:
         ----------
         df_manual_responses : DataFrame
             dataframe with results from get_RTs()
-        
+        per_ecc: bool
+            if we want to get slope per eccentricity or combined over all
         """ 
 
         # set empty df
@@ -586,22 +587,35 @@ class BehResponses:
 
             print('calculating search slopes for sub-{sj}'.format(sj = pp))
 
-            # loop over ecc
-            for e in self.dataObj.ecc: 
+            if per_ecc: # loop over ecc
+                for e in self.dataObj.ecc: 
+                    # sub-select df
+                    df_temp = df_manual_responses[(df_manual_responses['sj'] == 'sub-{sj}'.format(sj = pp)) & \
+                                        (df_manual_responses['target_ecc'] == e) & \
+                                        (df_manual_responses['correct_response'] == 1)]
 
+                    # fit linear regressor
+                    regressor = LinearRegression()
+                    regressor.fit(df_temp[['set_size']], df_temp[['RT']]*1000) # because we want slope to be in ms/item
+
+                    # save df
+                    df_search_slopes = pd.concat([df_search_slopes, 
+                                                    pd.DataFrame({'sj': ['sub-{sj}'.format(sj = pp)], 
+                                                                'target_ecc': [e],   
+                                                                'slope': [regressor.coef_[0][0]],
+                                                                'intercept': [regressor.intercept_[0]]})])
+            else:
                 # sub-select df
                 df_temp = df_manual_responses[(df_manual_responses['sj'] == 'sub-{sj}'.format(sj = pp)) & \
-                                    (df_manual_responses['target_ecc'] == e) & \
                                     (df_manual_responses['correct_response'] == 1)]
 
                 # fit linear regressor
                 regressor = LinearRegression()
                 regressor.fit(df_temp[['set_size']], df_temp[['RT']]*1000) # because we want slope to be in ms/item
-
+                
                 # save df
                 df_search_slopes = pd.concat([df_search_slopes, 
                                                 pd.DataFrame({'sj': ['sub-{sj}'.format(sj = pp)], 
-                                                            'target_ecc': [e],   
                                                             'slope': [regressor.coef_[0][0]],
                                                             'intercept': [regressor.intercept_[0]]})])
 
