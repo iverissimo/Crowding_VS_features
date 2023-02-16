@@ -956,7 +956,6 @@ class EyeTrackVsearch(EyeTrack):
                             
         return df_scanpath_ratio
 
-    
     def get_mean_fix_on_features_df(self, df_fixations_on_features = None):
 
         """ 
@@ -1075,7 +1074,6 @@ class EyeTrackVsearch(EyeTrack):
 
         return fix_selectivity
 
-
     def get_ALLfix_on_features_df(self, df_manual_responses = None, exclude_target_fix = True, sampling_rate = 1000, min_fix_start = .150):
 
         """ 
@@ -1167,8 +1165,6 @@ class EyeTrackVsearch(EyeTrack):
                                                                             block_num = blk, trial_num = t)
 
                                 if len(fix_selectivity) > 0: # if not empty
-                                    print(blk)
-                                    print(t)
                                     arr_len = len(fix_selectivity['rank'])
 
                                     df_fixations_on_features = pd.concat((df_fixations_on_features,

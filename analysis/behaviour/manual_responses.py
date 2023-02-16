@@ -46,7 +46,6 @@ class BehResponses:
 
         return new_df
 
-    
     def get_RTs(self, missed_trl_thresh = .25, exclude_outliers = False, threshold_std = 3, threshold_sec = .250):
         
         """
@@ -263,7 +262,6 @@ class BehResponses:
         else:
             self.df_manual_responses = df_manual_responses
 
-
     def exclude_search_outlier_trials(self, df_manual_responses, threshold_std = 3):
 
         """helper function to
@@ -312,8 +310,7 @@ class BehResponses:
                     
 
         return clean_manual_responses
-        
-        
+            
     def get_meanRT(self, df_manual_responses, acc_set_thresh = .75, acc_total_thresh = .85):
         
         """
@@ -421,8 +418,7 @@ class BehResponses:
                     self.exclude_sj_bool['sub-{sj}'.format(sj = pp)] = True
     
         self.df_mean_results = df_mean_results 
-
-    
+  
     def get_NoFlankers_meanRT(self, df_manual_responses, 
                                     feature_type = ['target_both', 'target_color', 'target_ori'],
                                     acc_thresh = .25):
@@ -483,7 +479,6 @@ class BehResponses:
             
         self.df_NoFlanker_results = df_NoFlanker_results 
         
-
     def get_critical_spacing(self, staircases = None, num_trials = 96, cs_min_thresh = .20, cs_max_thresh = .65):
         
         """
@@ -538,8 +533,7 @@ class BehResponses:
                                             'critical_spacing': cs_val})]) 
 
         self.df_CS = df_CS
-
-    
+   
     def combine_CS_df(self, df_CS):
 
         """
@@ -564,7 +558,6 @@ class BehResponses:
                                         })), ignore_index = True)
     
         return corr_df4plotting
-
 
     def get_search_slopes(self, df_manual_responses, per_ecc = True):
 
@@ -621,7 +614,6 @@ class BehResponses:
 
         self.df_search_slopes = df_search_slopes 
 
-
     def make_search_CS_corr_2Dmatrix(self, corr_df4plotting, method = 'pearson'):
 
         """
@@ -669,7 +661,6 @@ class BehResponses:
 
         return corr_df, pval_df
 
-
     def make_search_CS_corr_1Dmatrix(self, corr_df4plotting, method = 'pearson'):
 
         """
@@ -704,4 +695,119 @@ class BehResponses:
         return corr_df, pval_df
 
 
+    def get_OriVSdata_meanRT(self, ecc = [4, 8, 12], setsize = [5,15,30], minRT = .250, max_RT = 5):
 
+        """
+        Helper function to calculate mean RT for search data
+        of previous experiment. Based on what was done in other repo
+        """
+
+        ## Load summary measures
+        previous_dataset_pth = self.dataObj.params['paths']['data_ori_vs_pth']
+        sum_measures = np.load(op.join(previous_dataset_pth,
+                                    'summary','sum_measures.npz')) # all relevant measures
+
+        ## get list with all participants
+        # that passed the inclusion criteria
+        previous_sub_list = [val for val in sum_measures['all_subs'] if val not in sum_measures['excluded_sub']]
+
+        # set up empty df
+        df_mean_results = pd.DataFrame({'sj': [],'target_ecc': [], 'set_size': [], 'mean_RT': []})
+
+        # loop over participants
+        for prev_pp in previous_sub_list:
+            # load behav data search
+            prev_pp_VSfile = op.join(previous_dataset_pth, 'output_VS', 
+                                        'data_visualsearch_pp_{p}.csv'.format(p = prev_pp))
+            df_vs = pd.read_csv(prev_pp_VSfile, sep='\t')
+
+            # loop over ecc and set size
+            for e in ecc:
+                for ss in setsize:
+
+                    # sub select dataframe for specific set size and ecc
+                    df_e_ss = df_vs[(df_vs['target_ecc'] == e) & \
+                                    (df_vs['set_size'] == ss) & \
+                                    (df_vs['key_pressed'] == df_vs['target_orientation']) & \
+                                    (df_vs['RT'] > minRT) & \
+                                    (df_vs['RT'] < max_RT)]
+
+
+                    df_mean_results = pd.concat((df_mean_results,
+                                                pd.DataFrame({'sj': [prev_pp],
+                                                            'target_ecc': [e], 
+                                                            'set_size': [ss], 
+                                                            'mean_RT': [np.nanmean(df_e_ss.RT.values)]})), 
+                                                            ignore_index = True)
+
+        return df_mean_results
+
+    def get_OriVSdata_CS(self, ecc = [4, 8, 12]):
+        
+        """
+        Helper function to CS values for crowding data
+        of previous experiment. Based on what was done in other repo
+        """
+
+        ## Load summary measures
+        previous_dataset_pth = self.dataObj.params['paths']['data_ori_vs_pth']
+        sum_measures = np.load(op.join(previous_dataset_pth,
+                                    'summary','sum_measures.npz')) # all relevant measures
+
+        ## get list with all participants
+        # that passed the inclusion criteria
+        previous_sub_list = [val for val in sum_measures['all_subs'] if val not in sum_measures['excluded_sub']]
+
+        ## get CS values for all eccentricities 
+        cs_val_list = [sum_measures['all_cs'][ind] for ind, val in enumerate(sum_measures['all_subs']) if val not in sum_measures['excluded_sub']]
+
+        ## save in dataframe
+        df_prev_CS = pd.DataFrame({'sj': np.repeat(previous_sub_list, len(ecc)),
+                                  'CS': np.array(cs_val_list).ravel(),
+                                  'CS_ecc': np.tile(ecc, len(previous_sub_list))})
+
+        return df_prev_CS
+
+    def get_OriVSdata_slopes(self, minRT = .250, max_RT = 5):
+
+        """
+        Helper function to calculate RT slopes for search data
+        of previous experiment. Based on what was done in other repo
+        """
+
+        ## Load summary measures
+        previous_dataset_pth = self.dataObj.params['paths']['data_ori_vs_pth']
+        sum_measures = np.load(op.join(previous_dataset_pth,
+                                    'summary','sum_measures.npz')) # all relevant measures
+
+        ## get list with all participants
+        # that passed the inclusion criteria
+        previous_sub_list = [val for val in sum_measures['all_subs'] if val not in sum_measures['excluded_sub']]
+
+        # set up empty df
+        df_slope_results = pd.DataFrame({'sj': [], 'slope': [], 'intercept': []})
+
+        # loop over participants
+        for prev_pp in previous_sub_list:
+            # load behav data search
+            prev_pp_VSfile = op.join(previous_dataset_pth, 'output_VS', 
+                                        'data_visualsearch_pp_{p}.csv'.format(p = prev_pp))
+            df_vs = pd.read_csv(prev_pp_VSfile, sep='\t')
+
+            # sub select dataframe 
+            df_tmp = df_vs[(df_vs['key_pressed'] == df_vs['target_orientation']) & \
+                        (df_vs['RT'] > minRT) & \
+                        (df_vs['RT'] < max_RT)]
+
+            # fit linear regressor
+            regressor = LinearRegression()
+            regressor.fit(df_tmp[['set_size']], df_tmp[['RT']]*1000) # because we want slope to be in ms/item
+
+
+            # save df
+            df_slope_results = pd.concat((df_slope_results, 
+                                        pd.DataFrame({'sj': [prev_pp],
+                                                    'slope': [regressor.coef_[0][0]],
+                                                    'intercept': [regressor.intercept_[0]]})), ignore_index = True)
+
+        return df_slope_results
