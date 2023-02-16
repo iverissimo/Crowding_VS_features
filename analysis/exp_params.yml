@@ -34,6 +34,7 @@ paths:
   curr_dir: 'local' # 'local'
   data_pth: {'lab': 'C:\Users\crowding_search_2\Desktop\LocalPC-DATA\',
             'local': '/Volumes/Verissimo_Seagate_Hub_Plus/Projects/CVS/DATA'} 
+  data_ori_vs_pth: '/Volumes/Verissimo_Seagate_Hub_Plus/Projects/CVS/OriSearch_DATA' # path to old dataset
 
 eyetracker:
   address: '100.1.1.1' #  Eyelink eyetracker IP
