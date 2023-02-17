@@ -803,7 +803,6 @@ class BehResponses:
             regressor = LinearRegression()
             regressor.fit(df_tmp[['set_size']], df_tmp[['RT']]*1000) # because we want slope to be in ms/item
 
-
             # save df
             df_slope_results = pd.concat((df_slope_results, 
                                         pd.DataFrame({'sj': [prev_pp],

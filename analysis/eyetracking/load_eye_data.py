@@ -1182,6 +1182,122 @@ class EyeTrackVsearch(EyeTrack):
         return df_fixations_on_features
 
 
+    def get_OriVSdata_fixations(self, ecc = [4, 8, 12], setsize = [5,15,30], minRT = .250, max_RT = 5, 
+                                prev_vRes = 1050, prev_hRes=1680):
+
+        """
+        Helper function to count number of fixations for search data
+        of previous experiment. Based on what was done in other repo
+        """
+        # append Pygaz analyser folder, cloned from https://github.com/esdalmaijer/PyGazeAnalyser.git
+        sys.path.append(op.join('/Users/verissimo/Documents/Projects/PSR_2019/Crowding','PyGazeAnalyser'))
+        from pygazeanalyser.edfreader import read_edf
+
+        ## Load summary measures
+        previous_dataset_pth = self.dataObj.params['paths']['data_ori_vs_pth']
+        sum_measures = np.load(op.join(previous_dataset_pth,
+                                    'summary','sum_measures.npz')) # all relevant measures
+
+        ## get list with all participants
+        # that passed the inclusion criteria
+        previous_sub_list = [val for val in sum_measures['all_subs'] if val not in sum_measures['excluded_sub']]
+
+        # if fixations between 150ms after display and key press time
+        sample_thresh = 1000 * 0.150 # 1000Hz * time in seconds
+
+        # gabor radius in pixels
+        prev_r_gabor = (2.2/2)/self.get_dva_per_pix(height_cm = 30, 
+                                                    distance_cm = 57, 
+                                                    vert_res_pix = prev_vRes)
+
+        # set up empty df
+        df_fixations = pd.DataFrame({'sj': [], 'trial': [], 'target_ecc': [], 'set_size': [], 'nr_fixations': []})
+
+        # loop over participants
+        for prev_pp in previous_sub_list:
+
+            # load behav data search
+            prev_pp_VSfile = op.join(previous_dataset_pth, 'output_VS', 
+                                        'data_visualsearch_pp_{p}.csv'.format(p = prev_pp))
+            df_vs = pd.read_csv(prev_pp_VSfile, sep='\t')
+
+            # load eye data
+            prev_pp_eye_VSfile = op.join(previous_dataset_pth, 'output_VS', 
+                               'eyedata_visualsearch_pp_{p}.asc'.format(p = prev_pp))
+            eyedata_vs = read_edf(prev_pp_eye_VSfile, 'start_trial', stop='stop_trial', debug=False)
+
+            # sub select behavioral dataframe 
+            df_tmp = df_vs[(df_vs['key_pressed'] == df_vs['target_orientation']) & \
+                            (df_vs['RT'] > minRT) & \
+                            (df_vs['RT'] < max_RT)]
+
+            # loop over trials
+            for ind, trl_num in enumerate(df_tmp.index.values):
+
+                # index for moment when display was shown
+                idx_display = np.where(np.array(eyedata_vs[trl_num]['events']['msg'])[:,-1]=='var display True\n')[0][0]
+                # eye tracker sample time of display
+                smp_display = eyedata_vs[trl_num]['events']['msg'][idx_display][0]             
+
+                # get list of fixations in trial
+                trl_fix_list = [arr for _,arr in enumerate(eyedata_vs[trl_num]['events']['Efix']) if (arr[0] > smp_display+sample_thresh) and \
+                                        (arr[0] < np.round(smp_display + df_tmp.RT.values[ind]*1000))]
+
+                # if there are fixations in trial
+                if len(trl_fix_list) > 0:
+                    # get target position as strings in list
+                    target_pos = df_tmp.target_position.values[ind].replace(']','').replace('[','').split(' ')
+                    # convert to list of floats
+                    target_pos = np.array([float(val) for i,val in enumerate(target_pos) if len(val)>1])
+
+                    ## check if last fixation on target
+                    fix_x = trl_fix_list[-1][-2] - prev_hRes/2
+                    fix_y = trl_fix_list[-1][-1] - prev_vRes/2; fix_y = - fix_y
+
+                    if np.sqrt((fix_x-target_pos[0])**2+(fix_y-target_pos[1])**2) <= prev_r_gabor: # if it was, then remove
+                        trl_fix_list = trl_fix_list[:-1]
+
+                ## concatenate in DataFrame
+                df_fixations = pd.concat((df_fixations,
+                                        pd.DataFrame({'sj': prev_pp, 
+                                        'trial': [trl_num], 
+                                        'target_ecc': [df_tmp.target_ecc.values[ind]], 
+                                        'set_size': [df_tmp.set_size.values[ind]], 
+                                        'nr_fixations': [len(trl_fix_list)]})
+                                        ), ignore_index = True)
+                
+        return df_fixations
+
+    def get_OriVSdata_FixSlopes(self, df_previous_fixations):
+
+        """
+        Helper function to calculate RT slopes for search data
+        of previous experiment. 
+        Expects fixation dataframe from self.get_OriVSdata_fixations
+        """
+
+        # set up empty df
+        df_slope_results = pd.DataFrame({'sj': [], 'slope': [], 'intercept': []})
+
+        ## loop over participants
+        for prev_pp in df_previous_fixations.sj.unique():
+
+            df_tmp = df_previous_fixations[df_previous_fixations['sj'] == prev_pp]
+
+            # fit linear regressor
+            regressor = LinearRegression()
+            regressor.fit(df_tmp[['set_size']], df_tmp[['nr_fixations']])
+
+            # save df
+            df_slope_results = pd.concat((df_slope_results, 
+                                        pd.DataFrame({'sj': [prev_pp],
+                                                    'slope': [regressor.coef_[0][0]],
+                                                    'intercept': [regressor.intercept_[0]]})), ignore_index = True)
+
+        return df_slope_results
+
+
+
 
 
 

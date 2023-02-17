@@ -954,3 +954,40 @@ def permutation_correlations(x, y, method = 'spearman',
         pval_perm = len(np.where(perm_rho <= rho)[0])/perm_num
 
     return perm_rho, pval_perm
+
+
+def compare_correlations_Fisher(rho1 = None, rho2 = None, n1 = None, n2 = None, p_val_side = 'two-sided'):
+
+    """
+    Test the equality of two independent population correlation coefficients,
+    using Fisher's z-transformation
+
+    Parameters
+    ----------
+    rho1: float
+        correlation coeficient 
+    rho2: float
+        correlation coeficient 
+    n1: int
+        sample size of rho1
+    n2: int
+        sample size of rho2
+    """
+
+    # correlation coefficients r are transformed using Fisher z transformation
+    z1 = .5 * np.log((1+rho1)/(1-rho1))
+    z2 = .5 * np.log((1+rho2)/(1-rho2))
+
+    # standard error of the difference
+    SEzdiff = np.sqrt(( (1/(n1-3)) + (1/(n2-3)) ))
+
+    # test statistic z 
+    ztest = (z1 - z2)/SEzdiff
+
+    # p value
+    if p_val_side == 'two-sided':
+        p_val = scipy.stats.norm.sf(abs(ztest))*2 #twosided
+    else:
+        p_val = scipy.stats.norm.sf(abs(ztest)) #one-sided
+
+    return ztest, p_val
