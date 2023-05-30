@@ -559,7 +559,7 @@ class BehResponses:
     
         return corr_df4plotting
 
-    def get_search_slopes(self, df_manual_responses, per_ecc = True):
+    def get_search_slopes(self, df_manual_responses, per_ecc = True, fit_type = 'linear'):
 
         """
         calculate search slopes and intercept per ecc
@@ -587,33 +587,169 @@ class BehResponses:
                                         (df_manual_responses['target_ecc'] == e) & \
                                         (df_manual_responses['correct_response'] == 1)]
 
-                    # fit linear regressor
-                    regressor = LinearRegression()
-                    regressor.fit(df_temp[['set_size']], df_temp[['RT']]*1000) # because we want slope to be in ms/item
+                    if fit_type == 'linear':
+                        # fit linear regressor
+                        regressor = LinearRegression()
+                        regressor.fit(df_temp[['set_size']], df_temp[['RT']]*1000) # because we want slope to be in ms/item
+                        slope_val = regressor.coef_[0][0]
+                        intercept = regressor.intercept_[0]
+
+                    else: # assumes logarithmic
+                        popt_, _ = scipy.optimize.curve_fit(lambda t,a,b: a+b*np.log(t), 
+                                                                    df_temp.set_size.values, 
+                                                                    df_temp.RT.values * 1000)
+                        slope_val = popt_[1]
+                        intercept = popt_[0]
 
                     # save df
                     df_search_slopes = pd.concat([df_search_slopes, 
                                                     pd.DataFrame({'sj': ['sub-{sj}'.format(sj = pp)], 
                                                                 'target_ecc': [e],   
-                                                                'slope': [regressor.coef_[0][0]],
-                                                                'intercept': [regressor.intercept_[0]]})])
+                                                                'slope': [slope_val],
+                                                                'intercept': [intercept]})])
             else:
                 # sub-select df
                 df_temp = df_manual_responses[(df_manual_responses['sj'] == 'sub-{sj}'.format(sj = pp)) & \
                                     (df_manual_responses['correct_response'] == 1)]
 
-                # fit linear regressor
-                regressor = LinearRegression()
-                regressor.fit(df_temp[['set_size']], df_temp[['RT']]*1000) # because we want slope to be in ms/item
+                if fit_type == 'linear':
+                    # fit linear regressor
+                    regressor = LinearRegression()
+                    regressor.fit(df_temp[['set_size']], df_temp[['RT']]*1000) # because we want slope to be in ms/item
+                    slope_val = regressor.coef_[0][0]
+                    intercept = regressor.intercept_[0]
                 
+                else: # assumes logarithmic
+                        popt_, _ = scipy.optimize.curve_fit(lambda t,a,b: a+b*np.log(t), 
+                                                                    df_temp.set_size.values, 
+                                                                    df_temp.RT.values * 1000)
+                        slope_val = popt_[1]
+                        intercept = popt_[0]
+                    
                 # save df
                 df_search_slopes = pd.concat([df_search_slopes, 
                                                 pd.DataFrame({'sj': ['sub-{sj}'.format(sj = pp)], 
-                                                            'slope': [regressor.coef_[0][0]],
-                                                            'intercept': [regressor.intercept_[0]]})])
+                                                            'slope': [slope_val],
+                                                            'intercept': [intercept]})])
 
         self.df_search_slopes = df_search_slopes 
 
+    def calc_rsq(self, data_arr, pred_arr):
+        return np.nan_to_num(1 - (np.nansum((data_arr - pred_arr)**2, axis=0)/ np.nansum(((data_arr - np.mean(data_arr))**2), axis=0)))
+
+    def calc_chisq(self, data, pred, error = None):
+
+        """
+        Calculate model fit  chi-square
+        
+        Parameters
+        ----------
+        data : arr
+            data array that was fitted
+        pred : arr
+            model prediction
+        error: arr
+            data uncertainty (if None will not be taken into account)
+        """ 
+    
+        # residuals
+        resid = data - pred 
+        
+        # if not providing uncertainty in ydata
+        if error is None:
+            error = np.ones(len(data))
+        
+        chisq = sum((resid/ error) ** 2)
+        
+        return chisq
+
+    def calc_reduced_chisq(self, data, pred, error = None, n_params = None):
+
+        """
+        Calculate model fit Reduced chi-square
+        
+        Parameters
+        ----------
+        data : arr
+            data array that was fitted
+        pred : arr
+            model prediction
+        error: arr
+            data uncertainty (if None will not be taken into account)
+        n_params: int
+            number of parameters in model
+        """ 
+        
+        return self.calc_chisq(data, pred, error = error) / (len(data) - n_params)
+
+    def calc_AIC(self, data, pred, error = None, n_params = None):
+
+        """
+        Calculate model fit Akaike Information Criterion,
+        which measures of the relative quality for a fit, 
+        trying to balance quality of fit with the number of variable parameters used in the fit
+        
+        Parameters
+        ----------
+        data : arr
+            data array that was fitted
+        pred : arr
+            model prediction
+        error: arr
+            data uncertainty (if None will not be taken into account)
+        n_params: int
+            number of parameters in model
+        """ 
+        
+        chisq = self.calc_chisq(data, pred, error = error)
+        n_obs = len(data) # number of data points
+        
+        return n_obs * np.log(chisq/n_obs) + 2 * n_params
+    
+    def calc_BIC(self, data, pred, error = None, n_params = None):
+
+        """
+        Calculate model fit Bayesian information criterion,
+        which measures of the relative quality for a fit, 
+        trying to balance quality of fit with the number of variable parameters used in the fit
+        
+        Parameters
+        ----------
+        data : arr
+            data array that was fitted
+        pred : arr
+            model prediction
+        error: arr
+            data uncertainty (if None will not be taken into account)
+        n_params: int
+            number of parameters in model
+        """ 
+        
+        chisq = self.calc_chisq(data, pred, error = error)
+        n_obs = len(data) # number of data points
+        
+        return n_obs * np.log(chisq/n_obs) + np.log(n_obs) * n_params
+    
+    def get_search_slope_prediction(self, df_coeff, data = None,
+                                    fit_type = 'linear', dm = np.array([7,16,31])):
+        
+        """
+        Quick function to get prediction array for search slopes
+        given previously fitted model parameters (log vs lin) 
+        """
+
+        if fit_type == 'linear':
+            pred_arr = df_coeff.slope.values[0] * dm + df_coeff.intercept.values[0]
+        
+        else: # assumes logarithmic
+            pred_arr = df_coeff.slope.values[0] * np.log(dm) + df_coeff.intercept.values[0] 
+
+        if data is not None:
+            r2 = self.calc_rsq(data, pred_arr)
+            return pred_arr, r2
+        else:
+            return pred_arr
+    
     def make_search_CS_corr_2Dmatrix(self, corr_df4plotting, method = 'pearson'):
 
         """
