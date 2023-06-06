@@ -634,6 +634,35 @@ class BehResponses:
 
         self.df_search_slopes = df_search_slopes 
 
+    def split_half_search_df(self, df_manual_responses, groub_by = ['target_ecc', 'set_size'], seed_num = 1):
+
+        """
+        Quick function to split response dataframe into 2 random halfs
+        To later calculate reliability
+        """
+
+        df_p1 = pd.DataFrame({})
+        df_p2 = pd.DataFrame({})
+
+        # loop over subjects
+        for ind, pp in enumerate(self.dataObj.sj_num):
+
+            print('spliting in 2 random halfs DF for sub-{sj}'.format(sj = pp))
+
+            half_1 = df_manual_responses[(df_manual_responses['sj'] == 'sub-{sj}'.format(sj = pp)) & \
+                                        (df_manual_responses['correct_response'] == 1)].groupby(groub_by).sample(frac = 0.5,
+                                                                                                                random_state = seed_num + ind)
+            
+            half_2 = df_manual_responses[(df_manual_responses['sj'] == 'sub-{sj}'.format(sj = pp)) & \
+                                        (df_manual_responses['correct_response'] == 1)].drop(half_1.index)
+            
+            # append
+            df_p1 = pd.concat((df_p1, half_1), ignore_index=True)
+            df_p2 = pd.concat((df_p2, half_2), ignore_index=True)
+
+        return df_p1, df_p2
+
+
     def calc_rsq(self, data_arr, pred_arr):
         return np.nan_to_num(1 - (np.nansum((data_arr - pred_arr)**2, axis=0)/ np.nansum(((data_arr - np.mean(data_arr))**2), axis=0)))
 
