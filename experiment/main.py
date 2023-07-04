@@ -82,13 +82,13 @@ def main():
             exp_sess = TrainVsearchSession(output_str = output_str,
                                   output_dir = output_dir,
                                   settings_file = 'experiment_settings.yml',
-                                  eyetracker_on = True) #False) #True)
+                                  eyetracker_on = False) #False) #True)
         
         else: # real deal
             exp_sess = VsearchSession(output_str = output_str,
                                 output_dir = output_dir,
                                 settings_file = 'experiment_settings.yml',
-                                eyetracker_on = True) #False) #True)
+                                eyetracker_on = False) #False) #True)
 
     elif exp_type == 'crowding': # run crowding task
         
@@ -103,7 +103,7 @@ def main():
             exp_sess = CrowdingSession(output_str = output_str,
                                     output_dir = output_dir,
                                     settings_file = 'experiment_settings.yml',
-                                    eyetracker_on = True) #False) #True)
+                                    eyetracker_on = False) #False) #True)
 
    	                            
     exp_sess.run()
