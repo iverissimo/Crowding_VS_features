@@ -41,6 +41,10 @@ class PlotsEye:
         # number of participants to plot
         self.nr_pp = len(self.dataObj.sj_num)
 
+        # set font type for plots globally
+        plt.rcParams['font.family'] = 'sans-serif'
+        plt.rcParams['font.sans-serif'] = 'Helvetica'
+
 
     def plot_search_saccade_path(self, participant, eye_events_df, 
                                 trial_num = 0, block_num = 0, r_gabor = 50, save_fig = True):
@@ -243,6 +247,65 @@ class PlotsEye:
                 fig.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_task-{task}_VSearch_fixations.png'.format(nr = self.nr_pp,
                                                                                                             ses = self.dataObj.session, 
                                                                                                             task = self.dataObj.task_name)))
+
+            ### plot main Fixation group figure ###
+            
+            # make fake dataframe, to fill with nans
+            # so we force plot to be in continuous x-axis
+            fake_ss = np.array([i for i in np.arange(int(self.BehObj.dataObj.set_size[-1])) if i not in self.BehObj.dataObj.set_size[:2]])
+
+            tmp_df = pd.DataFrame({'sj': [], 'target_ecc': [], 'set_size': [], 'mean_RT': [], 'accuracy': []})
+            for s in df_mean_fixations.sj.unique():
+                
+                tmp_df = pd.concat((tmp_df,
+                                pd.DataFrame({'sj': np.repeat(s,len(np.repeat(fake_ss,3))), 
+                                                'target_ecc': np.tile(self.BehObj.dataObj.num_ecc,len(fake_ss)), 
+                                                'set_size': np.repeat(fake_ss,3), 
+                                                'mean_fixations': np.repeat(np.nan,len(np.repeat(fake_ss,3))), 
+                                                'mean_fix_dur': np.repeat(np.nan,len(np.repeat(fake_ss,3)))})))
+            fake_DF = pd.concat((df_mean_fixations,tmp_df))
+
+            ## actually plot
+            fig, ax1 = plt.subplots(1,1, figsize=(9,3), dpi=1000, facecolor='w', edgecolor='k')
+
+            pt.RainCloud(data = fake_DF, #df_mean_fixations, 
+                        x = 'set_size', y = 'mean_fixations', pointplot = False, hue='target_ecc',
+                        palette = self.dataObj.params['plotting']['ecc_colors'],
+                        linewidth = 1, alpha = .9, dodge = True, saturation = 1, 
+                        point_size = 1.8, width_viol = 3,
+                        width_box = .72, offset = 0.45, move = .8, jitter = 0.25,
+                        ax = ax1)
+            ax1.set_xlabel('Set Size [items]', fontsize = 16, labelpad = 15)
+            ax1.set_ylabel('# Fixations', fontsize = 16, labelpad = 15)
+            #ax1.set_title('Reaction Times Crowding N = {nr}'.format(nr = self.nr_pp))
+            ax1.set_ylim(0,17)
+            ax1.set_xlim(5,33)
+
+            ax1.tick_params(axis='both', labelsize=14)
+            ax1.xaxis.set_ticks(np.arange(7, 33, 3))
+            ax1.set_xticklabels([str(i) for i in np.arange(7, 33, 3)])
+
+            #sns.pointplot(data = df_mean_results, 
+            #             x = 'set_size', y = 'mean_RT', hue='target_ecc',
+            #             palette = search_behaviour.dataObj.params['plotting']['ecc_colors'],
+            #             linewidth = 1, alpha = .75, dodge = True, saturation = 1, 
+            #             point_size = 1, ax = ax1)
+
+            # quick fix for legen
+            handleA = mpatches.Patch(color = self.dataObj.params['plotting']['ecc_colors'][4],
+                                    label = '4 deg')
+            handleB = mpatches.Patch(color = self.dataObj.params['plotting']['ecc_colors'][8],
+                                    label = '8 deg')
+            handleC = mpatches.Patch(color = self.dataObj.params['plotting']['ecc_colors'][12],
+                                    label = '12 deg')
+            ax1.legend(loc = 'upper left',fontsize=8, handles = [handleA, handleB, handleC], 
+                                title="Target ecc")#, fancybox=True)
+
+            if save_fig:
+                fig.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_task-{task}_Fixations.svg'.format(nr = self.nr_pp,
+                                                                                                ses = self.BehObj.dataObj.session, 
+                                                                                                task = self.BehObj.dataObj.task_name)),
+                            bbox_inches='tight')
 
 
     def plot_correlations_Fix_CS(self, df_CS = None, df_mean_fixations = None, 

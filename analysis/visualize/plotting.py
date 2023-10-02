@@ -14,6 +14,7 @@ import scipy
 import ptitprince as pt # raincloud plots
 import matplotlib.patches as mpatches
 from  matplotlib.ticker import FuncFormatter
+import matplotlib.ticker as plticker
 
 
 class PlotsBehavior:
@@ -41,6 +42,10 @@ class PlotsBehavior:
             
         # number of participants to plot
         self.nr_pp = len(self.BehObj.dataObj.sj_num)
+
+        # set font type for plots globally
+        plt.rcParams['font.family'] = 'sans-serif'
+        plt.rcParams['font.sans-serif'] = 'Helvetica'
         
     
     def plot_critical_spacing(self, df_CS, save_fig = True):
@@ -56,33 +61,99 @@ class PlotsBehavior:
     
         # if we have more than 1 participant data in object
         if self.nr_pp > 1: # make group plot
-            
-            fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,5), dpi=100, facecolor='w', edgecolor='k')
-            
-            pt.RainCloud(data = df_CS, 
-                        x = 'crowding_type', y = 'critical_spacing', pointplot = True, 
-                        palette = self.BehObj.dataObj.params['plotting']['crwd_type_colors'],
-                        linecolor = 'grey',alpha = .75, dodge = True, saturation = 1, ax = ax1)
-            ax1.set_ylabel('CS')
-            ax1.set_xlabel('')
-            ax1.set_title('Critical spacing N = {nr}'.format(nr = self.nr_pp))
-            ax1.set_ylim(self.BehObj.dataObj.params['crowding']['staircase']['distance_ratio_bounds'][0],
-                        self.BehObj.dataObj.params['crowding']['staircase']['distance_ratio_bounds'][-1])
 
-            sns.pointplot(x = 'crowding_type', y = 'critical_spacing', hue = 'sj',
-                            data = df_CS, 
-                             ax = ax2) 
-            ax2.set_ylabel('CS')
-            ax2.set_xlabel('')
-            ax2.set_title('Critical spacing N = {nr}'.format(nr = self.nr_pp))
-            ax1.set_ylim(self.BehObj.dataObj.params['crowding']['staircase']['distance_ratio_bounds'][0],
-                        self.BehObj.dataObj.params['crowding']['staircase']['distance_ratio_bounds'][-1])
-            ax2.legend(fontsize=8, loc='upper right')
-            
+            fig, ax1 = plt.subplots(1,1, figsize=(4,4), dpi=1000, facecolor='w', edgecolor='k')
+
+            sns.swarmplot(data = df_CS, x = 'crowding_type', y = 'critical_spacing',
+                        palette = self.BehObj.dataObj.params['plotting']['crwd_type_colors'],
+                        marker = 'o', size=4, ax = ax1, alpha = .45)
+
+            ax1.plot(df_CS.crowding_type, df_CS.critical_spacing, color='gray', zorder = -1, 
+                    alpha = .25, lw=.6)
+
+            sns.pointplot(data = df_CS, x = 'crowding_type', y = 'critical_spacing',
+                        palette = self.BehObj.dataObj.params['plotting']['crwd_type_colors'],
+                        size=7, ax = ax1, alpha = 1, n_boot=5000)
+
+            ax1.set_ylabel('CS', fontsize = 16, labelpad = 15)
+            ax1.set_xlabel('Flanker type', fontsize = 16, labelpad = 15)
+            ax1.set_ylim(0.15, .85)
+            ax1.tick_params(axis='both', labelsize=14)
+
             if save_fig:
-                fig.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_task-{task}_CS_distribution.png'.format(nr = self.nr_pp,
-                                                                                                            ses = self.BehObj.dataObj.session, 
-                                                                                                            task = self.BehObj.dataObj.task_name)))
+                fig.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_task-{task}_CS.svg'.format(nr = self.nr_pp,
+                                                                                                ses = self.BehObj.dataObj.session, 
+                                                                                                task = self.BehObj.dataObj.task_name)),
+                            bbox_inches='tight')
+                
+    def plot_delta_acc_CS(self, acc_diff_df = None, df_CS = None, save_fig = True):
+        
+        """ plot accuracy diff for different features + critical spacing for group
+        
+        Parameters
+        ----------
+        save_fig : bool
+            save figure in output dir
+            
+        """
+
+        df_mean2plot = pd.DataFrame({'crowding_type': acc_diff_df.groupby(['crowding_type']).mean().reset_index().crowding_type.values.astype(str),
+                                    'acc_diff_color': acc_diff_df.groupby(['crowding_type']).mean().reset_index().acc_diff_color.values.astype(float),
+                                    'acc_diff_ori': acc_diff_df.groupby(['crowding_type']).mean().reset_index().acc_diff_ori.values.astype(float)})
+    
+        # if we have more than 1 participant data in object
+        if self.nr_pp > 1: # make group plot
+
+            fig, ax1 = plt.subplots(1,2, figsize=(10, 4), dpi=1000, facecolor='w', edgecolor='k', constrained_layout = True)
+
+            g = sns.scatterplot(data = df_mean2plot, 
+                        y = "acc_diff_color", x="acc_diff_ori", hue="crowding_type",
+                        palette = self.BehObj.dataObj.params['plotting']['crwd_type_colors'],
+                        ax = ax1[0],s=50)
+            ax1[0].errorbar(df_mean2plot.acc_diff_ori.values, 
+                        df_mean2plot.acc_diff_color.values, 
+                        yerr = acc_diff_df.groupby(['crowding_type']).sem().reset_index().acc_diff_color.values, 
+                        xerr = acc_diff_df.groupby(['crowding_type']).sem().reset_index().acc_diff_ori.values,
+                        zorder = 0, c='grey', alpha=.9, fmt='none')
+            ax1[0].set_xlabel('$\Delta$ Orientation Accuracy (%)', fontsize = 16, labelpad = 15)
+            ax1[0].set_ylabel('$\Delta$ Color Accuracy (%)', fontsize = 16, labelpad = 15)
+            ax1[0].set_xlim(- 15, 0) #ax1[0].set_xlim(0.84, 1.0)
+            ax1[0].set_ylim(- 15, 0) #ax1[0].set_ylim(0.84, 1.0)
+            ax1[0].tick_params(axis='both', labelsize=14)
+            ax1[0].legend(loc = 'lower right',fontsize=8, title = 'Flanker type')
+            # Draw a line of x=y 
+            x0, x1 = g.get_xlim()
+            y0, y1 = g.get_ylim()
+            lims = [max(x0, y0), min(x1, y1)]
+            g.plot(lims, lims, '--k',zorder = -1, alpha = .3)
+
+            loc = plticker.MultipleLocator(base= 5)#.05) # this locator puts ticks at regular intervals
+            ax1[0].xaxis.set_major_locator(loc)
+            ax1[0].yaxis.set_major_locator(loc)
+
+            g2 = sns.swarmplot(data = df_CS, x = 'crowding_type', y = 'critical_spacing',
+                        palette = self.BehObj.dataObj.params['plotting']['crwd_type_colors'],
+                        marker = 'o', size=4, ax = ax1[1], alpha = .45)
+
+            ax1[1].plot(df_CS.crowding_type, df_CS.critical_spacing, color='gray', zorder = -1, 
+                    alpha = .25, lw=.6)
+
+            g3 = sns.pointplot(data = df_CS, x = 'crowding_type', y = 'critical_spacing',
+                        palette = self.BehObj.dataObj.params['plotting']['crwd_type_colors'],
+                        size=7, ax = ax1[1], alpha = 1, n_boot=5000)
+
+            ax1[1].set_ylabel('CS', fontsize = 16, labelpad = 15)
+            ax1[1].set_xlabel('Flanker type', fontsize = 16, labelpad = 15)
+            ax1[1].set_ylim(0.15, .85)
+            ax1[1].tick_params(axis='both', labelsize=14)
+
+            fig.subplots_adjust(wspace=0.4)
+
+            if save_fig:
+                fig.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_task-{task}_DeltaFeatureAccuracy_CS.svg'.format(nr = self.nr_pp,
+                                                                                                                ses = self.BehObj.dataObj.session, 
+                                                                                                                task = self.BehObj.dataObj.task_name)),
+                            bbox_inches='tight')
 
     def plot_staircases(self, save_fig = True):
         
@@ -117,7 +188,6 @@ class PlotsBehavior:
                 fig.savefig(op.join(pp_folder, 'sub-{sj}_ses-{ses}_task-{task}_staircases.png'.format(sj = pp,
                                                                                                             ses = self.BehObj.dataObj.session, 
                                                                                                             task = self.BehObj.dataObj.task_name)))
-
 
     def plot_RT_acc_crowding(self, df_manual_responses = None, df_NoFlanker_results = None, df_mean_results = None,
                                     no_flank = False, save_fig = True):
@@ -213,22 +283,21 @@ class PlotsBehavior:
                     fig.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_task-{task}_RT_ACC_UNflankered.png'.format(nr = self.nr_pp,
                                                                                                             ses = self.BehObj.dataObj.session, 
                                                                                                             task = self.BehObj.dataObj.task_name)))
-
         else: # flanked trials
             
             # loop over subjects
             for pp in self.BehObj.dataObj.sj_num:
 
-                fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,5), dpi=100, facecolor='w', edgecolor='k')
+                fig, (ax1, ax2) = plt.subplots(1,2, figsize=(15,4), dpi=100, facecolor='w', edgecolor='k')
 
                 # Reaction Time distribution 
                 pt.RainCloud(data = df_manual_responses[(df_manual_responses['sj'] == 'sub-{sj}'.format(sj = pp)) & \
                                                         (df_manual_responses['correct_response'] == 1)], 
-                             x = 'crowding_type', y = 'RT', pointplot = True, 
-                             palette = self.BehObj.dataObj.params['plotting']['crwd_type_colors'],
+                            x = 'crowding_type', y = 'RT', pointplot = True, linewidth = 1,
+                            palette = self.BehObj.dataObj.params['plotting']['crwd_type_colors'],
                             linecolor = 'grey',alpha = .75, dodge = True, saturation = 1, ax = ax1)
-                ax1.set_ylabel('RT (seconds)')
-                ax1.set_xlabel('')
+                ax1.set_ylabel('RT [s]', fontsize = 16, labelpad = 15)
+                ax1.set_xlabel('Flanker type', fontsize = 16, labelpad = 15)
                 ax1.set_title('Reaction Times Crowding sub-{sj}'.format(sj = pp))
                 ax1.set_ylim(0.2,2)
 
@@ -245,10 +314,10 @@ class PlotsBehavior:
                              x = 'crowding_type', y = 'accuracy', 
                              color = self.BehObj.dataObj.params['plotting']['target_feature_colors']['target_both'],
                              label = 'target both', ax = ax2)
-                ax2.set_ylabel('Accuracy')
-                ax2.set_xlabel('')
+                ax2.set_ylabel('Accuracy', fontsize = 16, labelpad = 15)
+                ax2.set_xlabel('Flanker type', fontsize = 16, labelpad = 15)
                 ax2.set_title('Accuracy Crowding sub-{sj}'.format(sj = pp))
-                ax2.set_ylim(0,1.05)
+                ax2.set_ylim(0.25, 1.01)
                 # quick fix for legend
                 handleA = mpatches.Patch(color = self.BehObj.dataObj.params['plotting']['target_feature_colors']['target_color'], 
                                          label='target color')
@@ -270,49 +339,122 @@ class PlotsBehavior:
             # if we have more than 1 participant data in object
             if self.nr_pp > 1: # make group plot
 
-                fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2,2, figsize=(15,10), dpi=100, facecolor='w', edgecolor='k')
+                ## RT FIGURE
+                fig, ax1 = plt.subplots(1,1, figsize=(7,4), dpi=1000, facecolor='w', edgecolor='k')
 
                 pt.RainCloud(data = df_mean_results, 
-                             x = 'crowding_type', y = 'mean_RT', pointplot = True, 
-                             palette = self.BehObj.dataObj.params['plotting']['crwd_type_colors'],
-                            linecolor = 'grey',alpha = .75, dodge = True, saturation = 1, ax = ax1)
-                ax1.set_ylabel('RT (seconds)')
-                ax1.set_xlabel('')
-                ax1.set_title('Reaction Times Crowding N = {nr}'.format(nr = self.nr_pp))
+                            x = 'crowding_type', y = 'mean_RT', pointplot = False, 
+                            palette = self.BehObj.dataObj.params['plotting']['crwd_type_colors'],
+                            linewidth = 1, alpha = .75, dodge = True, saturation = 1, 
+                            point_size = 2, width_box = .06, offset = 0.05, move = .1, jitter = 0.05,
+                            ax = ax1)
+                ax1.set_ylabel('RT [s]', fontsize = 16, labelpad = 15)
+                ax1.set_xlabel('Flanker type', fontsize = 16, labelpad = 15)
+                #ax1.set_title('Reaction Times Crowding N = {nr}'.format(nr = self.nr_pp))
                 ax1.set_ylim(0.2, 2)
+                ax1.tick_params(axis='both', labelsize=14)
+
+                if save_fig:
+                    fig.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_task-{task}_RT_flankered.svg'.format(nr = self.nr_pp,
+                                                                                                            ses = self.BehObj.dataObj.session, 
+                                                                                                            task = self.BehObj.dataObj.task_name)),
+                                bbox_inches='tight')
+                    
+                ## ACCURACY FIGURE
+                fig, ax1 = plt.subplots(1,1, figsize=(7,4), dpi=1000, facecolor='w', edgecolor='k')
 
                 pt.RainCloud(data = df_mean_results, 
-                             x = 'crowding_type', y = 'accuracy', pointplot = True, 
-                             palette = self.BehObj.dataObj.params['plotting']['crwd_type_colors'],
-                            linecolor = 'grey',alpha = .75, dodge = True, saturation = 1, ax = ax2)
-                ax2.set_ylabel('Accuracy')
-                ax2.set_xlabel('')
-                ax2.set_title('Accuracy Crowding N = {nr}'.format(nr = self.nr_pp))
-                ax2.set_ylim(0, 1.05)
+                            x = 'crowding_type', y = 'accuracy', pointplot = False, 
+                            palette = self.BehObj.dataObj.params['plotting']['crwd_type_colors'],
+                            linewidth = 1, alpha = .75, dodge = True, saturation = 1, 
+                            point_size = 2, width_box = .06, offset = 0.05, move = .1, jitter = 0.05,
+                            ax = ax1)
+                ax1.set_ylabel('Accuracy', fontsize = 16, labelpad = 15)
+                ax1.set_xlabel('Flanker type', fontsize = 16, labelpad = 15)
+                #ax1.set_title('Reaction Times Crowding N = {nr}'.format(nr = self.nr_pp))
+                ax1.set_ylim(0.25, 1.01)
+                ax1.tick_params(axis='both', labelsize=14)
+
+                if save_fig:
+                    fig.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_task-{task}_ACC_flankered.svg'.format(nr = self.nr_pp,
+                                                                                                            ses = self.BehObj.dataObj.session, 
+                                                                                                            task = self.BehObj.dataObj.task_name)),
+                                bbox_inches='tight')
+
+                ## extra stuff 
+
+                fig, (ax3, ax4) = plt.subplots(1,2, figsize=(15,4), dpi=100, facecolor='w', edgecolor='k')
                 
                 sns.pointplot(x = 'crowding_type', y = 'RT', hue = 'sj',
                             data = df_manual_responses[(df_manual_responses['correct_response'] == 1)], 
                              ax = ax3)
-                ax3.set_ylabel('RT (seconds)')
-                ax3.set_xlabel('')
+                ax3.set_ylabel('RT [s]', fontsize = 16, labelpad = 15)
+                ax3.set_xlabel('Flanker type', fontsize = 16, labelpad = 15)
                 ax3.set_title('Reaction Times Crowding N = {nr}'.format(nr = self.nr_pp))
                 ax3.set_ylim(0.2, 2)
                 ax3.legend([]) #ax3.legend(fontsize=8, loc='upper right')
 
                 sns.pointplot(x = 'crowding_type', y = 'accuracy', hue = 'sj', 
                             data = df_mean_results, 
-                              ax = ax4)
-                ax4.set_ylabel('Accuracy')
-                ax4.set_xlabel('')
+                            ax = ax4)
+                ax4.set_ylabel('Accuracy', fontsize = 16, labelpad = 15)
+                ax4.set_xlabel('Flanker type', fontsize = 16, labelpad = 15)
                 ax4.set_title('Accuracy Crowding N = {nr}'.format(nr = self.nr_pp))
-                ax4.set_ylim(0, 1.05)
+                ax4.set_ylim(0.25, 1.01)
                 ax4.legend([]) #ax4.legend(fontsize=8, loc='lower right')
                 
                 if save_fig:
-                    fig.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_task-{task}_RT_ACC_flankered.png'.format(nr = self.nr_pp,
+                    fig.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_task-{task}_RT_ACC_singlesj_flankered.png'.format(nr = self.nr_pp,
                                                                                                             ses = self.BehObj.dataObj.session, 
                                                                                                             task = self.BehObj.dataObj.task_name)))
 
+    def plot_acc_features_crowding(self, df_mean_results = None, save_fig = True):
+        
+        """ plot feature accuracy of crowding task (assimilation errors?), for group
+        
+        Parameters
+        ----------
+        save_fig : bool
+            save figure in output dir
+            
+        """
+
+        # if we have more than 1 participant data in object
+        if self.nr_pp > 1: # make group plot
+
+            df_mean2plot = pd.DataFrame({'crowding_type': df_mean_results.groupby(['crowding_type']).mean().reset_index().crowding_type.values.astype(str),
+                                        'accuracy_color': df_mean_results.groupby(['crowding_type']).mean().reset_index().accuracy_color.values.astype(float),
+                                        'accuracy_ori': df_mean_results.groupby(['crowding_type']).mean().reset_index().accuracy_ori.values.astype(float)})
+
+            fig, ax1 = plt.subplots(1,1, figsize=(4, 4), dpi=1000, facecolor='w', edgecolor='k')
+
+            g = sns.scatterplot(data = df_mean2plot, 
+                        y = "accuracy_color", x="accuracy_ori", hue="crowding_type",
+                        palette = self.BehObj.dataObj.params['plotting']['crwd_type_colors'],
+                        ax = ax1,s=50)
+            ax1.errorbar(df_mean2plot.accuracy_ori.values, 
+                        df_mean2plot.accuracy_color.values, 
+                        yerr = df_mean_results.groupby(['crowding_type']).sem().reset_index().accuracy_color.values, 
+                        xerr = df_mean_results.groupby(['crowding_type']).sem().reset_index().accuracy_ori.values,
+                        zorder = 0, c='grey', alpha=.9, fmt='none')
+            ax1.set_xlabel('Orientation Percent correct', fontsize = 16, labelpad = 15)
+            ax1.set_ylabel('Color Percent correct', fontsize = 16, labelpad = 15)
+            ax1.set_xlim(.75, 1.0)
+            ax1.set_ylim(.75, 1.0)
+            ax1.tick_params(axis='both', labelsize=14)
+            ax1.legend(loc = 'lower right',fontsize=8, title = 'Flanker type')
+
+            # Draw a line of x=y 
+            x0, x1 = g.get_xlim()
+            y0, y1 = g.get_ylim()
+            lims = [max(x0, y0), min(x1, y1)]
+            g.plot(lims, lims, '--k',zorder = -1, alpha = .3)
+
+            if save_fig:
+                fig.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_task-{task}_FeatureAccuracy.svg'.format(nr = self.nr_pp,
+                                                                                                ses = self.BehObj.dataObj.session, 
+                                                                                                task = self.BehObj.dataObj.task_name)),
+                            bbox_inches='tight')
 
     def plot_RT_acc_search(self, df_manual_responses = None, df_mean_results = None, df_search_slopes = None,
                         save_fig = True):
@@ -445,6 +587,61 @@ class PlotsBehavior:
                 fig.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_task-{task}_VSearch_RT_acc.png'.format(nr = self.nr_pp,
                                                                                                             ses = self.BehObj.dataObj.session, 
                                                                                                             task = self.BehObj.dataObj.task_name)))
+                
+            ### plot main RT group figure ###
+            
+            # make fake dataframe, to fill with nans
+            # so we force plot to be in continuous x-axis
+            fake_ss = np.array([i for i in np.arange(int(self.BehObj.dataObj.set_size[-1])) if i not in self.BehObj.dataObj.set_size[:2]])
+
+            tmp_df = pd.DataFrame({'sj': [], 'target_ecc': [], 'set_size': [], 'mean_RT': [], 'accuracy': []})
+            for s in df_mean_results.sj.unique():
+                
+                tmp_df = pd.concat((tmp_df,
+                                pd.DataFrame({'sj': np.repeat(s,len(np.repeat(fake_ss,3))), 
+                                                'target_ecc': np.tile(self.BehObj.dataObj.num_ecc,len(fake_ss)), 
+                                                'set_size': np.repeat(fake_ss,3), 
+                                                'mean_RT': np.repeat(np.nan,len(np.repeat(fake_ss,3))), 
+                                                'accuracy': np.repeat(np.nan,len(np.repeat(fake_ss,3)))})))
+            fake_DF = pd.concat((df_mean_results,tmp_df))
+
+            ## actually plot
+            fig, ax1 = plt.subplots(1,1, figsize=(9,3), dpi=1000, facecolor='w', edgecolor='k')
+
+            pt.RainCloud(data = fake_DF, #df_mean_results, 
+                        x = 'set_size', y = 'mean_RT', pointplot = False, hue='target_ecc',
+                        palette = self.BehObj.dataObj.params['plotting']['ecc_colors'],
+                        linewidth = 1,
+                        alpha = .9, dodge = True, saturation = 1, 
+                        point_size = 1.8, width_viol = 3,
+                        width_box = .72, offset = 0.45, move = .8, jitter = 0.25,
+                        ax = ax1)
+            ax1.set_xlabel('Set Size [items]', fontsize = 16, labelpad = 15)
+            ax1.set_ylabel('RT [s]', fontsize = 16, labelpad = 15)
+            #ax1.set_title('Reaction Times Crowding N = {nr}'.format(nr = self.nr_pp))
+            ax1.set_ylim(0.5,5.1)
+            ax1.set_xlim(5,33)
+
+            ax1.tick_params(axis='both', labelsize=14)
+            ax1.xaxis.set_ticks(np.arange(7, 33, 3))
+            ax1.set_xticklabels([str(i) for i in np.arange(7, 33, 3)])
+            #ax1.xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(search_behaviour.dataObj.set_size[x]))) 
+
+            # quick fix for legen
+            handleA = mpatches.Patch(color = self.BehObj.dataObj.params['plotting']['ecc_colors'][4],
+                                    label = '4 deg')
+            handleB = mpatches.Patch(color = self.BehObj.dataObj.params['plotting']['ecc_colors'][8],
+                                    label = '8 deg')
+            handleC = mpatches.Patch(color = self.BehObj.dataObj.params['plotting']['ecc_colors'][12],
+                                    label = '12 deg')
+            ax1.legend(loc = 'upper left',fontsize=8, handles = [handleA, handleB, handleC], 
+                                title="Target ecc")#, fancybox=True)
+
+            if save_fig:
+                fig.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_task-{task}_RT.svg'.format(nr = self.nr_pp,
+                                                                                                ses = self.BehObj.dataObj.session, 
+                                                                                                task = self.BehObj.dataObj.task_name)),
+                            bbox_inches='tight')
 
 
     def plot_correlations_RT_CS(self, df_CS = None, df_mean_results = None, 
@@ -713,72 +910,137 @@ class PlotsBehavior:
         # organize CS values in tidy DF
         corr_df4plotting = self.BehObj.combine_CS_df(df_CS)
 
-        # COLOR vs ORIENTATION CS
-        g = sns.lmplot(data = corr_df4plotting, x = 'color', y = 'orientation', height = 5)
+        ### COLOR vs ORIENTATION CS ###
+        g = sns.jointplot(data = corr_df4plotting, x = 'color', y = 'orientation', kind = 'reg', marker = 'x',
+                        xlim = (.15,.71), ylim = (.15,.71), marginal_ticks = True, color = 'grey',#'#918e91',#'#baafba',
+                        marginal_kws=dict(bins=10, fill=True, kde=False, stat='percent'),
+                        height=6, ratio=3, space = .5)
 
+        # Draw a line of x=y 
+        x0, x1 = g.ax_joint.get_xlim()
+        y0, y1 = g.ax_joint.get_ylim()
+        lims = [max(x0, y0), min(x1, y1)]
+        g.ax_joint.plot(lims, lims, '--k',zorder = -1, alpha = .3)
+
+        # margin axis labels
+        #g.ax_marg_x.set_xlabel('Percent')#, fontsize = 12, labelpad = 15)
+        g.ax_marg_x.tick_params(axis='both', labelsize=18)
+        g.ax_marg_y.tick_params(axis='both', labelsize=18)
+
+        # add color to histogram
+        plt.setp(g.ax_marg_y.patches, 
+                color = self.BehObj.dataObj.params['plotting']['crwd_type_colors']['orientation'], alpha=.75)
+        plt.setp(g.ax_marg_x.patches, 
+                color = self.BehObj.dataObj.params['plotting']['crwd_type_colors']['color'], alpha=.75)
+
+        # add annotation with spearman correlation
         rho, pval = scipy.stats.spearmanr(corr_df4plotting.color.values, 
-                                        corr_df4plotting.orientation.values)
-        g.axes[0][0].text(.2, .7, 
-                                'rho = %.2f \np-value = %.3f'%(rho,pval), 
-                                horizontalalignment='left')
-
+                                                corr_df4plotting.orientation.values)
+        g.ax_joint.text(.58, .18, 
+                        r"$\rho$ = {r}".format(r = '%.2f'%(rho))+\
+                        '\n{p}'.format(p = '$\it{p}$ < .001'), #+r"= {:.2e}".format(pval)),
+                        horizontalalignment='left', fontsize = 18, fontweight='bold')
         # axis labels
-        g.set_axis_labels('Color CS','Orientation CS', fontsize = 10, labelpad=15)
-        g.axes[0][0].set(xlim=(.15, .75), ylim=(.15, .75))
+        g.ax_joint.set_ylabel('Orientation CS', fontsize = 22, labelpad = 15)
+        g.ax_joint.set_xlabel('Color CS', fontsize = 22, labelpad = 15)
+        g.ax_joint.tick_params(axis='both', labelsize=18)
+        # set the ticks first
+        g.ax_joint.set_xticks(np.around(np.linspace(.15,.71,7),decimals=1))
+        g.ax_joint.set_yticks(np.around(np.linspace(.15,.71,7),decimals=1))
 
         if save_fig:
-            g.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_correlations_CS-color_orientation.png'.format(nr = self.nr_pp,
+            g.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_CS_correlation_ORI_COLOR.svg'.format(nr = self.nr_pp,
                                                                                                     ses = self.BehObj.dataObj.session
-                                                                                                    )))
+                                                                                                    )),
+                    bbox_inches='tight')
 
-        # COLOR vs CONJUNCTION CS   
-        g = sns.lmplot(data = corr_df4plotting, x = 'color', y = 'conjunction', height = 5)
+        ### COLOR vs CONJUNCTION CS ###
+        g = sns.jointplot(data = corr_df4plotting, x = 'color', y = 'conjunction', kind = 'reg', marker = 'x',
+                        xlim = (.15,.71), ylim = (.15,.71), marginal_ticks = True, color = 'grey',#'#918e91',#'#baafba',
+                        marginal_kws=dict(bins=10, fill=True, kde=False, stat='percent'),
+                        height=6, ratio=3, space = .5)
 
+        # Draw a line of x=y 
+        x0, x1 = g.ax_joint.get_xlim()
+        y0, y1 = g.ax_joint.get_ylim()
+        lims = [max(x0, y0), min(x1, y1)]
+        g.ax_joint.plot(lims, lims, '--k',zorder = -1, alpha = .3)
+
+        # margin axis labels
+        #g.ax_marg_x.set_xlabel('Percent')#, fontsize = 12, labelpad = 15)
+        g.ax_marg_x.tick_params(axis='both', labelsize=18)
+        g.ax_marg_y.tick_params(axis='both', labelsize=18)
+
+        # add color to histogram
+        plt.setp(g.ax_marg_y.patches, 
+                color = self.BehObj.dataObj.params['plotting']['crwd_type_colors']['conjunction'], alpha=.75)
+        plt.setp(g.ax_marg_x.patches, 
+                color = self.BehObj.dataObj.params['plotting']['crwd_type_colors']['color'], alpha=.75)
+
+        # add annotation with spearman correlation
         rho, pval = scipy.stats.spearmanr(corr_df4plotting.color.values, 
-                                        corr_df4plotting.conjunction.values)
-        g.axes[0][0].text(.2, .7, 
-                                'rho = %.2f \np-value = %.3f'%(rho,pval), 
-                                horizontalalignment='left')
-
+                                                corr_df4plotting.conjunction.values)
+        g.ax_joint.text(.58, .18, 
+                        r"$\rho$ = {r}".format(r = '%.2f'%(rho))+\
+                        '\n{p}'.format(p = '$\it{p}$ < .001'), #+r"= {:.2e}".format(pval)),
+                        horizontalalignment='left', fontsize = 18, fontweight='bold')
         # axis labels
-        g.set_axis_labels('Color CS','Conjunction CS', fontsize = 10, labelpad=15)
-        g.axes[0][0].set(xlim=(.15, .75), ylim=(.15, .75))
+        g.ax_joint.set_ylabel('Conjunction CS', fontsize = 22, labelpad = 15)
+        g.ax_joint.set_xlabel('Color CS', fontsize = 22, labelpad = 15)
+        g.ax_joint.tick_params(axis='both', labelsize=18)
+        # set the ticks first
+        g.ax_joint.set_xticks(np.around(np.linspace(.15,.71,7),decimals=1))
+        g.ax_joint.set_yticks(np.around(np.linspace(.15,.71,7),decimals=1))  
 
         if save_fig:
-            g.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_correlations_CS-color_conjunction.png'.format(nr = self.nr_pp,
+            g.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_CS_correlation_CONJ_COLOR.svg'.format(nr = self.nr_pp,
                                                                                                     ses = self.BehObj.dataObj.session
-                                                                                                    )))
+                                                                                                    )),
+                    bbox_inches='tight')
 
-        # ORIENTATION vs CONJUNCTION CS   
-        g = sns.lmplot(data = corr_df4plotting, x = 'conjunction', y = 'orientation', height = 5)
+        ### ORIENTATION vs CONJUNCTION CS ### 
+        g = sns.jointplot(data = corr_df4plotting, x = 'conjunction', y = 'orientation', kind = 'reg', marker = 'x',
+                        xlim = (.15,.71), ylim = (.15,.71), marginal_ticks = True, color = 'grey',#'#918e91',#'#baafba',
+                        marginal_kws=dict(bins=10, fill=True, kde=False, stat='percent'),
+                        height=6, ratio=3, space = .5)
 
+        # Draw a line of x=y 
+        x0, x1 = g.ax_joint.get_xlim()
+        y0, y1 = g.ax_joint.get_ylim()
+        lims = [max(x0, y0), min(x1, y1)]
+        g.ax_joint.plot(lims, lims, '--k',zorder = -1, alpha = .3)
+
+        # margin axis labels
+        #g.ax_marg_x.set_xlabel('Percent')#, fontsize = 12, labelpad = 15)
+        g.ax_marg_x.tick_params(axis='both', labelsize=18)
+        g.ax_marg_y.tick_params(axis='both', labelsize=18)
+
+        # add color to histogram
+        plt.setp(g.ax_marg_y.patches, 
+                color = self.BehObj.dataObj.params['plotting']['crwd_type_colors']['orientation'], alpha=.75)
+        plt.setp(g.ax_marg_x.patches, 
+                color = self.BehObj.dataObj.params['plotting']['crwd_type_colors']['conjunction'], alpha=.75)
+
+        # add annotation with spearman correlation
         rho, pval = scipy.stats.spearmanr(corr_df4plotting.conjunction.values, 
-                                        corr_df4plotting.orientation.values)
-        g.axes[0][0].text(.2, .7, 
-                                'rho = %.2f \np-value = %.3f'%(rho,pval), 
-                                horizontalalignment='left')
-
+                                                corr_df4plotting.orientation.values)
+        g.ax_joint.text(.58, .18, 
+                        r"$\rho$ = {r}".format(r = '%.2f'%(rho))+\
+                        '\n{p}'.format(p = '$\it{p}$ < .001'), #+r"= {:.2e}".format(pval)),
+                        horizontalalignment='left', fontsize = 18, fontweight='bold')
         # axis labels
-        g.set_axis_labels('Conjunction CS','Orientation CS', fontsize = 10, labelpad=15)
-        g.axes[0][0].set(xlim=(.15, .75), ylim=(.15, .75))
+        g.ax_joint.set_ylabel('Orientation CS', fontsize = 22, labelpad = 15)
+        g.ax_joint.set_xlabel('Conjunction CS', fontsize = 22, labelpad = 15)
+        g.ax_joint.tick_params(axis='both', labelsize=18)
+        # set the ticks first
+        g.ax_joint.set_xticks(np.around(np.linspace(.15,.71,7),decimals=1))
+        g.ax_joint.set_yticks(np.around(np.linspace(.15,.71,7),decimals=1)) 
 
         if save_fig:
-            g.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_correlations_CS-orientation_conjunction.png'.format(nr = self.nr_pp,
+            g.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_CS_correlation_ORI_CONJ.svg'.format(nr = self.nr_pp,
                                                                                                     ses = self.BehObj.dataObj.session
-                                                                                                    )))
-
-        # Getting the Upper Triangle of the co-relation matrix
-        #matrix = np.triu(corr_df4plotting.corr())
-        w = sns.heatmap(corr_df4plotting.corr(method = 'spearman'), 
-                    xticklabels=corr_df4plotting.corr().columns.values,
-                    yticklabels=corr_df4plotting.corr().columns.values,
-                    annot=True, cmap='Reds', vmin=0.6, vmax=1)#, mask=matrix)
-
-        if save_fig:
-            w.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_correlations_CS-heatmap.png'.format(nr = self.nr_pp,
-                                                                                                    ses = self.BehObj.dataObj.session
-                                                                                                    )))      
-
+                                                                                                    )),
+                    bbox_inches='tight')
 
     def plot_correlations_RT_CS_heatmap(self, df_CS = None, df_mean_results = None, method = 'pearson',
                                         crowding_type_list = ['orientation', 'color', 'conjunction'],

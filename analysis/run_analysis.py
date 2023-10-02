@@ -194,13 +194,13 @@ elif task == 'search':
     # get RTs for all trials
     search_behaviour.get_RTs(missed_trl_thresh = data_search.params['visual_search']['missed_trl_thresh'],
                             exclude_outliers = True, threshold_std = 3)
-
-    if py_cmd == 'RT':
     
-        # get mean RT and accuracy
-        search_behaviour.get_meanRT(df_manual_responses = search_behaviour.df_manual_responses,
-                                acc_set_thresh = data_search.params['visual_search']['acc_set_thresh'],
-                                acc_total_thresh = data_search.params['visual_search']['acc_total_thresh'])
+    # get mean RT and accuracy
+    search_behaviour.get_meanRT(df_manual_responses = search_behaviour.df_manual_responses,
+                            acc_set_thresh = data_search.params['visual_search']['acc_set_thresh'],
+                            acc_total_thresh = data_search.params['visual_search']['acc_total_thresh'])
+
+    if py_cmd in ['RT', 'fix']:
 
         ## get search slopes
         search_behaviour.get_search_slopes(df_manual_responses = search_behaviour.df_manual_responses)
@@ -209,17 +209,17 @@ elif task == 'search':
         search_plotter.plot_RT_acc_search(df_manual_responses = search_behaviour.df_manual_responses,
                                     df_mean_results = search_behaviour.df_mean_results,
                                     df_search_slopes = search_behaviour.df_search_slopes, save_fig = True)
+        
+        if py_cmd == 'fix':
 
-    elif py_cmd == 'fix':
+            # get mean number of fixations for search
+            eye_search.get_search_mean_fixations(df_manual_responses = search_behaviour.df_manual_responses, exclude_target_fix = True)
+            # and for all trials
+            eye_search.get_search_trl_fixations(df_manual_responses = search_behaviour.df_manual_responses, exclude_target_fix = True)
 
-        # get mean number of fixations for search
-        eye_search.get_search_mean_fixations(df_manual_responses = search_behaviour.df_manual_responses, exclude_target_fix = True)
-        # and for all trials
-        eye_search.get_search_trl_fixations(df_manual_responses = search_behaviour.df_manual_responses, exclude_target_fix = True)
-
-        # plot
-        eye_plotter.plot_fixations_search(df_trl_fixations = eye_search.df_trl_fixations,
-                                            df_mean_fixations = eye_search.df_mean_fixations, save_fig = True)
+            # plot
+            eye_plotter.plot_fixations_search(df_trl_fixations = eye_search.df_trl_fixations,
+                                                df_mean_fixations = eye_search.df_mean_fixations, save_fig = True)
 
     elif py_cmd == 'scanpath': # plot saccade scan path for participant
 
@@ -258,36 +258,54 @@ elif task == 'crowding':
     # get RTs for all trials
     # will produce a manual responses dataframe for all participants selected
     # useful for further analysis
-    crowding_behaviour.get_RTs(missed_trl_thresh = data_crowding.params['crowding']['missed_trl_thresh'])   
+    crowding_behaviour.get_RTs(missed_trl_thresh = data_crowding.params['crowding']['missed_trl_thresh']) 
+
+    # get mean RT and accuracy
+    crowding_behaviour.get_meanRT(df_manual_responses = crowding_behaviour.df_manual_responses)  
 
     if py_cmd == 'RT':
 
-        # get mean RT and accuracy
-        crowding_behaviour.get_meanRT(df_manual_responses = crowding_behaviour.df_manual_responses)
-        crowding_behaviour.get_NoFlankers_meanRT(df_manual_responses = crowding_behaviour.df_manual_responses, 
-                                            acc_thresh = data_crowding.params['crowding']['noflank_acc_thresh'])
-
-        # plot
-        crwd_plotter.plot_RT_acc_crowding(df_NoFlanker_results = crowding_behaviour.df_NoFlanker_results, 
-                                    no_flank = True, save_fig = True)
+        ## plot mean RT and accuracy for all crowding conditions
         crwd_plotter.plot_RT_acc_crowding(df_manual_responses = crowding_behaviour.df_manual_responses, 
                                     df_mean_results = crowding_behaviour.df_mean_results,
                                     no_flank = False, save_fig = True)
 
-    elif py_cmd == 'CS':
+        ## also plot RT and acc for no-flank condition 
+        crowding_behaviour.get_NoFlankers_meanRT(df_manual_responses = crowding_behaviour.df_manual_responses, 
+                                            acc_thresh = data_crowding.params['crowding']['noflank_acc_thresh'])
+
+        crwd_plotter.plot_RT_acc_crowding(df_NoFlanker_results = crowding_behaviour.df_NoFlanker_results, 
+                                    no_flank = True, save_fig = True)
+        
+    elif py_cmd in ['CS', 'crwd_estimates', 'CS_corr']:
 
         ## get critical spacing for crowding
         crowding_behaviour.get_critical_spacing(num_trials = data_crowding.nr_trials_flank * data_crowding.ratio_trls_cs,
                                                 cs_min_thresh = data_crowding.params['crowding']['cs_min_thresh'],
                                                 cs_max_thresh = data_crowding.params['crowding']['cs_max_thresh'])
+        
+        if py_cmd == 'CS':
 
-        # plot
-        crwd_plotter.plot_critical_spacing(crowding_behaviour.df_CS, save_fig = True)
-        crwd_plotter.plot_staircases(save_fig = True)
+            # plot CS distribution for group
+            crwd_plotter.plot_critical_spacing(crowding_behaviour.df_CS, save_fig = True)
+            # plot each individual staircase of values
+            crwd_plotter.plot_staircases(save_fig = True)
 
-        crwd_plotter.plot_CS_types_correlation(df_CS = crowding_behaviour.df_CS, save_fig = True)
+        elif py_cmd == 'crwd_estimates':
 
+            # plot accuracy, split by feature
+            crwd_plotter.plot_acc_features_crowding(df_mean_results = crowding_behaviour.df_mean_results, save_fig = True)
 
+            ## get accuracy diff dataframe
+            ACC_DIFF = crowding_behaviour.get_feature_acc_diff(df_mean_results = crowding_behaviour.df_mean_results)
+
+            # plot main crowding estimates (CS distribution + delta accuracy feature)
+            crwd_plotter.plot_delta_acc_CS(acc_diff_df = ACC_DIFF, df_CS = crowding_behaviour.df_CS, save_fig = True)
+
+        elif py_cmd == 'CS_corr':
+
+            ## plot correlation between CS types
+            crwd_plotter.plot_CS_types_correlation(df_CS = crowding_behaviour.df_CS, save_fig = True)
 
 
 # ### STATS ###

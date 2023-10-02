@@ -662,6 +662,38 @@ class BehResponses:
 
         return df_p1, df_p2
 
+    def get_feature_acc_diff(self, df_mean_results = None):
+
+        """
+        calculate accuracy of crowding task by features,
+        showing differences between unflakered and conditions, which will better account for inter-sub variability
+        """
+
+        # save accuracy diff for all participants in dataframe
+        ACC_DIFF = pd.DataFrame({'sj': [], 'crowding_type': [], 'acc_diff_color': [], 'acc_diff_ori': []})
+
+        # select unflankered condition
+        unflanked_df = df_mean_results[df_mean_results['crowding_type'] == 'unflankered']
+
+        for ct in ['color', 'conjunction', 'orientation']:
+            
+            # flanker condition
+            flanked_df = df_mean_results[df_mean_results['crowding_type'] == ct]
+
+            # accuracy difference for color
+            acc_diff_color = ((flanked_df.accuracy_color.values / unflanked_df.accuracy_color.values) - 1) * 100
+            # and for orientation
+            acc_diff_ori = ((flanked_df.accuracy_ori.values / unflanked_df.accuracy_ori.values) - 1) * 100
+            
+            ACC_DIFF = pd.concat((ACC_DIFF,
+                                pd.DataFrame({'sj': flanked_df.sj.values,
+                                            'crowding_type': np.repeat(ct, len(flanked_df.sj.values)),
+                                            'acc_diff_color': acc_diff_color, 
+                                            'acc_diff_ori': acc_diff_ori
+                                            })))
+
+        return ACC_DIFF
+
 
     def calc_rsq(self, data_arr, pred_arr):
         return np.nan_to_num(1 - (np.nansum((data_arr - pred_arr)**2, axis=0)/ np.nansum(((data_arr - np.mean(data_arr))**2), axis=0)))
