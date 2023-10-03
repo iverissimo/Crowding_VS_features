@@ -83,7 +83,6 @@ class EyeTrack:
         self.EYEsamples_files = EYEsamples_files
         self.EYEevents_files = EYEevents_files
 
-    
     def get_eyelink_events(self, filename, sampling_rate = 1000, save_as = None):
         
         """
@@ -274,18 +273,8 @@ class EyeTrackVsearch(EyeTrack):
 
         for pp in self.dataObj.sj_num:
 
-            ## get all eye events (fixation and saccades)
-
-            eye_df_filename = op.join(self.outdir, 'sub-{sj}_eye_events.csv'.format(sj = pp))
-            
-            if not op.isfile(eye_df_filename):
-                print('Getting eye events for sub-{sj}'.format(sj = pp))
-                eye_events_df = self.get_eyelink_events(self.EYEevents_files['sub-{sj}'.format(sj = pp)], 
-                                                        sampling_rate = sampling_rate, 
-                                                        save_as = eye_df_filename)
-            else:
-                print('Loading %s'%eye_df_filename)
-                eye_events_df = pd.read_csv(eye_df_filename)
+            ## load eye events df (fixation and saccades) for participant
+            eye_events_df = self.load_pp_eye_events_df(pp, sampling_rate = sampling_rate)
 
             ## participant trial info
             pp_trial_info = self.dataObj.trial_info_df[self.dataObj.trial_info_df['sj'] == 'sub-{pp}'.format(pp = pp)]
@@ -365,7 +354,6 @@ class EyeTrackVsearch(EyeTrack):
 
         self.df_mean_fixations = df_mean_fixations
 
-
     def get_search_trl_fixations(self, df_manual_responses = None, exclude_target_fix = True, sampling_rate = 1000, min_fix_start = .150):
 
         """ 
@@ -384,18 +372,8 @@ class EyeTrackVsearch(EyeTrack):
 
         for pp in self.dataObj.sj_num:
 
-            ## get all eye events (fixation and saccades)
-
-            eye_df_filename = op.join(self.outdir, 'sub-{sj}_eye_events.csv'.format(sj = pp))
-            
-            if not op.isfile(eye_df_filename):
-                print('Getting eye events for sub-{sj}'.format(sj = pp))
-                eye_events_df = self.get_eyelink_events(self.EYEevents_files['sub-{sj}'.format(sj = pp)], 
-                                                        sampling_rate = sampling_rate, 
-                                                        save_as = eye_df_filename)
-            else:
-                print('Loading %s'%eye_df_filename)
-                eye_events_df = pd.read_csv(eye_df_filename)
+            ## load eye events df (fixation and saccades) for participant
+            eye_events_df = self.load_pp_eye_events_df(pp, sampling_rate = sampling_rate)
 
             ## participant trial info
             pp_trial_info = self.dataObj.trial_info_df[self.dataObj.trial_info_df['sj'] == 'sub-{pp}'.format(pp = pp)]
@@ -473,7 +451,6 @@ class EyeTrackVsearch(EyeTrack):
                                                                     'mean_fix_dur': [dur]})), ignore_index = True)
 
         self.df_trl_fixations = df_trl_fixations
-
 
     def get_fix_slopes(self, df_trl_fixations, fix_nr = True, per_ecc = True):
 
@@ -864,18 +841,8 @@ class EyeTrackVsearch(EyeTrack):
 
         for pp in self.dataObj.sj_num:
 
-            ## get all eye events (fixation and saccades)
-
-            eye_df_filename = op.join(self.outdir, 'sub-{sj}_eye_events.csv'.format(sj = pp))
-            
-            if not op.isfile(eye_df_filename):
-                print('Getting eye events for sub-{sj}'.format(sj = pp))
-                eye_events_df = self.get_eyelink_events(self.EYEevents_files['sub-{sj}'.format(sj = pp)], 
-                                                        sampling_rate = sampling_rate, 
-                                                        save_as = eye_df_filename)
-            else:
-                print('Loading %s'%eye_df_filename)
-                eye_events_df = pd.read_csv(eye_df_filename)
+            ## load eye events df (fixation and saccades) for participant
+            eye_events_df = self.load_pp_eye_events_df(pp, sampling_rate = sampling_rate)
 
             ## participant trial info
             pp_trial_info = self.dataObj.trial_info_df[self.dataObj.trial_info_df['sj'] == 'sub-{pp}'.format(pp = pp)]
@@ -1094,17 +1061,8 @@ class EyeTrackVsearch(EyeTrack):
 
         for pp in self.dataObj.sj_num:
 
-            ## get all eye events (fixation and saccades)
-            eye_df_filename = op.join(self.outdir, 'sub-{sj}_eye_events.csv'.format(sj = pp))
-            
-            if not op.isfile(eye_df_filename):
-                print('Getting eye events for sub-{sj}'.format(sj = pp))
-                eye_events_df = self.get_eyelink_events(self.EYEevents_files['sub-{sj}'.format(sj = pp)], 
-                                                        sampling_rate = sampling_rate, 
-                                                        save_as = eye_df_filename)
-            else:
-                print('Loading %s'%eye_df_filename)
-                eye_events_df = pd.read_csv(eye_df_filename)
+            ## load eye events df (fixation and saccades) for participant
+            eye_events_df = self.load_pp_eye_events_df(pp, sampling_rate = sampling_rate)
 
             ## participant trial info
             pp_trial_info = self.dataObj.trial_info_df[self.dataObj.trial_info_df['sj'] == 'sub-{pp}'.format(pp = pp)]
@@ -1259,6 +1217,96 @@ class EyeTrackVsearch(EyeTrack):
             eye_events_df = pd.read_csv(eye_df_filename)
 
         return eye_events_df
+
+    def get_critical_distance_fix(self, pp_CS = None, target_pos = [0,0], fix_pos = [0, 0], dist_in_deg = False):
+
+        """
+        Helper function to get critical distance between target item and fixation coordinates
+        which can serve as reference to see if pp under crowded conditions at specific fixation
+        """
+
+        # get distance in pixels
+        distance_total = np.sqrt((target_pos[0] - fix_pos[0]) ** 2 + (target_pos[-1] - fix_pos[-1]) ** 2)
+        
+        # if we want to convert to deg
+        if dist_in_deg:
+            distance_total = distance_total * self.get_dva_per_pix(height_cm = self.dataObj.params['monitor_extra']['height'], 
+                                                                    distance_cm = self.dataObj.params['monitor']['distance'], 
+                                                                    vert_res_pix = self.dataObj.params['window_extra']['size'][1])
+            
+        ## multiply by participant CS ratio
+        distance_CS = distance_total * pp_CS
+
+        return distance_CS
+    
+    def find_distractors_in_CD(self, target_pos = [0,0], distr_arr = None, critical_distance = None):
+
+        """
+        Helper function that, given an array of distractor coordinates
+        return indices for distractors that are within critical_distance
+        """
+
+        # iterate over distractor coordinates to find which are 
+        # within critical distance
+
+        dist_ind_cs = [] # append index of distractors that are within CS 
+
+        for ind_dist, dist_coord in enumerate(distr_arr):
+
+            # if within euclidean distance
+            if np.sqrt((target_pos[0] - dist_coord[0])**2 + (target_pos[-1] - dist_coord[-1])**2) <= critical_distance:
+               dist_ind_cs.append(ind_dist)
+
+        return dist_ind_cs
+    
+    def get_trl_stimuli_features(self, pp_trial_info, block_num = None, trial_num = None):
+
+        """
+        Get relevant info on stimuli for specific participant trial
+        returns dict for target and distractors with coordinates, color and orientation of gabor patch
+        """
+
+        ## get info about trial stimuli 
+
+        ## get target and distractor positions
+        target_pos = pp_trial_info[(pp_trial_info['block'] == block_num) & \
+                                (pp_trial_info['index'] == trial_num)].target_pos.values[0]
+        distr_pos = pp_trial_info[(pp_trial_info['block'] == block_num) & \
+                                (pp_trial_info['index'] == trial_num)].distractor_pos.values[0]
+
+        ## get target and distractor colors 
+        target_color = pp_trial_info[(pp_trial_info['block'] == block_num) & \
+                                (pp_trial_info['index'] == trial_num)].target_color.values[0]
+
+        distr_color = pp_trial_info[(pp_trial_info['block'] == block_num) & \
+                                (pp_trial_info['index'] == trial_num)].distractor_color.values[0]
+
+        ## get target and distractor orientations 
+        target_ori_deg = pp_trial_info[(pp_trial_info['block'] == block_num) & \
+                                (pp_trial_info['index'] == trial_num)].target_ori.values[0]
+        # convert to LR labels
+        target_ori = 'R' if target_ori_deg == self.dataObj.params['stimuli']['ori_deg'] else 'L'
+
+        distr_ori_deg = pp_trial_info[(pp_trial_info['block'] == block_num) & \
+                                (pp_trial_info['index'] == trial_num)].distractor_ori.values[0]
+        # convert to LR labels
+        distr_ori = ['R' if ori == self.dataObj.params['stimuli']['ori_deg'] else 'L' for ori in distr_ori_deg]
+        
+        # save all in dict
+        trl_stimuli_dict = {'target': {'coords': target_pos, 'color': target_color, 'orientation': target_ori},
+                            'distractors': {'coords': distr_pos, 'color': distr_color, 'orientation': distr_ori}}
+        
+        return trl_stimuli_dict
+    
+    def count_nr_DTfeature(self, target_feat_arr = None, distr_feat_arr = None):
+
+        """
+        count number of distractors in array that share the target feature
+        """
+        return len([val for val in distr_feat_arr if str(val) == str(target_feat_arr)])
+
+
+
 
 
     def get_OriVSdata_fixations(self, ecc = [4, 8, 12], setsize = [5,15,30], minRT = .250, max_RT = 5, 

@@ -18,7 +18,7 @@ from  matplotlib.ticker import FuncFormatter
 class PlotsEye:
     
     
-    def __init__(self, dataObj, outputdir = None):
+    def __init__(self, BehObj, outputdir = None):
         
         """__init__
         constructor for class 
@@ -31,15 +31,15 @@ class PlotsEye:
         """
         
         # set results object to use later on
-        self.dataObj = dataObj
+        self.BehObj = BehObj
         # if output dir not defined, then make it in derivates
         if outputdir is None:
-            self.outputdir = op.join(self.dataObj.derivatives_pth,'plots', 'eyetracking')
+            self.outputdir = op.join(self.BehObj.dataObj.derivatives_pth,'plots', 'eyetracking')
         else:
             self.outputdir = outputdir
             
         # number of participants to plot
-        self.nr_pp = len(self.dataObj.sj_num)
+        self.nr_pp = len(self.BehObj.dataObj.sj_num)
 
         # set font type for plots globally
         plt.rcParams['font.family'] = 'sans-serif'
@@ -61,11 +61,11 @@ class PlotsEye:
         os.makedirs(outdir, exist_ok=True)
 
         ## screen resolution
-        hRes = self.dataObj.params['window_extra']['size'][0]
-        vRes = self.dataObj.params['window_extra']['size'][1]     
+        hRes = self.BehObj.dataObj.params['window_extra']['size'][0]
+        vRes = self.BehObj.dataObj.params['window_extra']['size'][1]     
 
         ## participant trial info
-        pp_trial_info = self.dataObj.trial_info_df[self.dataObj.trial_info_df['sj'] == 'sub-{pp}'.format(pp = participant)]
+        pp_trial_info = self.BehObj.dataObj.trial_info_df[self.BehObj.dataObj.trial_info_df['sj'] == 'sub-{pp}'.format(pp = participant)]
 
         ## get target and distractor positions as strings in list
         target_pos = pp_trial_info[(pp_trial_info['block'] == block_num) & \
@@ -84,12 +84,12 @@ class PlotsEye:
         target_ori_deg = pp_trial_info[(pp_trial_info['block'] == block_num) & \
                                 (pp_trial_info['index'] == trial_num)].target_ori.values[0]
         # convert to LR labels
-        target_ori = 'R' if target_ori_deg == self.dataObj.params['stimuli']['ori_deg'] else 'L'
+        target_ori = 'R' if target_ori_deg == self.BehObj.dataObj.params['stimuli']['ori_deg'] else 'L'
 
         distr_ori_deg = pp_trial_info[(pp_trial_info['block'] == block_num) & \
                                 (pp_trial_info['index'] == trial_num)].distractor_ori.values[0]
         # convert to LR labels
-        distr_ori = ['R' if ori == self.dataObj.params['stimuli']['ori_deg'] else 'L' for ori in distr_ori_deg]
+        distr_ori = ['R' if ori == self.BehObj.dataObj.params['stimuli']['ori_deg'] else 'L' for ori in distr_ori_deg]
 
         ## make figure
         f, s = plt.subplots(1, 1, figsize=(8,8))
@@ -113,7 +113,6 @@ class PlotsEye:
 
         ## plot saccade direction
         # draw an arrow between every saccade start and ending
-
         trial_sacc_df = eye_events_df[(eye_events_df['block_num'] == block_num) & \
                                     (eye_events_df['phase_name'] == 'stim') & \
                                     (eye_events_df['trial'] == trial_num) & \
@@ -147,29 +146,29 @@ class PlotsEye:
         """
         
         # loop over subjects
-        for i, pp in enumerate(self.dataObj.sj_num):
+        for i, pp in enumerate(self.BehObj.dataObj.sj_num):
             
             fig, (ax1, ax2) = plt.subplots(1,2, figsize=(18,7), dpi=100, facecolor='w', edgecolor='k')
 
             #### Reaction Time distribution ####
             pt.RainCloud(data = df_trl_fixations[(df_trl_fixations['sj'] == 'sub-{sj}'.format(sj = pp))], 
                         x = 'set_size', y = 'nr_fixations', pointplot = True, hue='target_ecc',
-                        palette = self.dataObj.params['plotting']['ecc_colors'],
+                        palette = self.BehObj.dataObj.params['plotting']['ecc_colors'],
                         linecolor = 'grey',alpha = .5, dodge = True, saturation = 1, ax = ax1)
             ax1.set_xlabel('Set Size', fontsize = 15, labelpad=15)
             ax1.set_ylabel('# Fixations', fontsize = 15, labelpad=15)
             ax1.set_title('# Fixations Search sub-{sj}'.format(sj = pp), fontsize = 20)
             # set x ticks as integer
-            ax1.xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(self.dataObj.set_size[x]))) 
+            ax1.xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(self.BehObj.dataObj.set_size[x]))) 
             ax1.tick_params(axis='both', labelsize = 15)
             ax1.set_ylim(0,17)
 
             # quick fix for legen
-            handleA = mpatches.Patch(color = self.dataObj.params['plotting']['ecc_colors'][4],
+            handleA = mpatches.Patch(color = self.BehObj.dataObj.params['plotting']['ecc_colors'][4],
                                     label = 4)
-            handleB = mpatches.Patch(color = self.dataObj.params['plotting']['ecc_colors'][8],
+            handleB = mpatches.Patch(color = self.BehObj.dataObj.params['plotting']['ecc_colors'][8],
                                     label = 8)
-            handleC = mpatches.Patch(color = self.dataObj.params['plotting']['ecc_colors'][12],
+            handleC = mpatches.Patch(color = self.BehObj.dataObj.params['plotting']['ecc_colors'][12],
                                     label = 12)
             ax1.legend(loc = 'upper left',fontsize=12, handles = [handleA, handleB, handleC], 
                     title="Target ecc", fancybox=True)
@@ -177,12 +176,12 @@ class PlotsEye:
             #### Accuracy ####
             sns.pointplot(data = df_trl_fixations[(df_trl_fixations['sj'] == 'sub-{sj}'.format(sj = pp))],
                         x = 'set_size', y = 'mean_fix_dur', hue='target_ecc',
-                        palette = self.dataObj.params['plotting']['ecc_colors'], ax = ax2)
+                        palette = self.BehObj.dataObj.params['plotting']['ecc_colors'], ax = ax2)
             ax2.set_xlabel('Set Size', fontsize = 15, labelpad=15)
             ax2.set_ylabel('Fixation duration (s)', fontsize = 15, labelpad=15)
             ax2.set_title('Mean Fixation duration Search sub-{sj}'.format(sj = pp), fontsize = 20)
             # set x ticks as integer
-            ax2.xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(self.dataObj.set_size[x]))) 
+            ax2.xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(self.BehObj.dataObj.set_size[x]))) 
             ax2.tick_params(axis='both', labelsize = 15)
             ax2.set_ylim(0,.4)
 
@@ -195,8 +194,8 @@ class PlotsEye:
                 os.makedirs(pp_folder, exist_ok=True)
 
                 fig.savefig(op.join(pp_folder, 'sub-{sj}_ses-{ses}_task-{task}_VSearch_fixations.png'.format(sj = pp,
-                                                                                                            ses = self.dataObj.session, 
-                                                                                                            task = self.dataObj.task_name)))
+                                                                                                            ses = self.BehObj.dataObj.session, 
+                                                                                                            task = self.BehObj.dataObj.task_name)))
                 
         # if we have more than 1 participant data in object
         if self.nr_pp > 1: # make group plot
@@ -206,22 +205,22 @@ class PlotsEye:
             #### Reaction Time distribution ####
             pt.RainCloud(data = df_mean_fixations, 
                         x = 'set_size', y = 'mean_fixations', pointplot = True, hue='target_ecc',
-                        palette = self.dataObj.params['plotting']['ecc_colors'],
+                        palette = self.BehObj.dataObj.params['plotting']['ecc_colors'],
                         linecolor = 'grey',alpha = .5, dodge = True, saturation = 1, ax = ax1)
             ax1.set_xlabel('Set Size', fontsize = 15, labelpad=15)
             ax1.set_ylabel('# Fixations', fontsize = 15, labelpad=15)
             ax1.set_title('Mean # Fixations Search N = {nr}'.format(nr = self.nr_pp), fontsize = 20)
             # set x ticks as integer
-            ax1.xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(self.dataObj.set_size[x]))) 
+            ax1.xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(self.BehObj.dataObj.set_size[x]))) 
             ax1.tick_params(axis='both', labelsize = 15)
             ax1.set_ylim(0,17)
 
             # quick fix for legen
-            handleA = mpatches.Patch(color = self.dataObj.params['plotting']['ecc_colors'][4],
+            handleA = mpatches.Patch(color = self.BehObj.dataObj.params['plotting']['ecc_colors'][4],
                                     label = 4)
-            handleB = mpatches.Patch(color = self.dataObj.params['plotting']['ecc_colors'][8],
+            handleB = mpatches.Patch(color = self.BehObj.dataObj.params['plotting']['ecc_colors'][8],
                                     label = 8)
-            handleC = mpatches.Patch(color = self.dataObj.params['plotting']['ecc_colors'][12],
+            handleC = mpatches.Patch(color = self.BehObj.dataObj.params['plotting']['ecc_colors'][12],
                                     label = 12)
             ax1.legend(loc = 'upper left',fontsize=12, handles = [handleA, handleB, handleC], 
                     title="Target ecc", fancybox=True)
@@ -229,12 +228,12 @@ class PlotsEye:
             #### Accuracy ####
             sns.pointplot(data = df_mean_fixations,
                         x = 'set_size', y = 'mean_fix_dur', hue='target_ecc',
-                        palette = self.dataObj.params['plotting']['ecc_colors'], ax = ax2)
+                        palette = self.BehObj.dataObj.params['plotting']['ecc_colors'], ax = ax2)
             ax2.set_xlabel('Set Size', fontsize = 15, labelpad=15)
             ax2.set_ylabel('Fixation duration (s)', fontsize = 15, labelpad=15)
             ax2.set_title('Mean Fixation duration Search N = {nr}'.format(nr = self.nr_pp), fontsize = 20)
             # set x ticks as integer
-            ax2.xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(self.dataObj.set_size[x]))) 
+            ax2.xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(self.BehObj.dataObj.set_size[x]))) 
             ax2.tick_params(axis='both', labelsize = 15)
             ax2.set_ylim(0,.4)
 
@@ -244,8 +243,8 @@ class PlotsEye:
 
             if save_fig:
                 fig.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_task-{task}_VSearch_fixations.png'.format(nr = self.nr_pp,
-                                                                                                            ses = self.dataObj.session, 
-                                                                                                            task = self.dataObj.task_name)))
+                                                                                                            ses = self.BehObj.dataObj.session, 
+                                                                                                            task = self.BehObj.dataObj.task_name)))
 
             ### plot main Fixation group figure ###
             
@@ -269,7 +268,7 @@ class PlotsEye:
 
             pt.RainCloud(data = fake_DF, #df_mean_fixations, 
                         x = 'set_size', y = 'mean_fixations', pointplot = False, hue='target_ecc',
-                        palette = self.dataObj.params['plotting']['ecc_colors'],
+                        palette = self.BehObj.dataObj.params['plotting']['ecc_colors'],
                         linewidth = 1, alpha = .9, dodge = True, saturation = 1, 
                         point_size = 1.8, width_viol = 3,
                         width_box = .72, offset = 0.45, move = .8, jitter = 0.25,
@@ -291,11 +290,11 @@ class PlotsEye:
             #             point_size = 1, ax = ax1)
 
             # quick fix for legen
-            handleA = mpatches.Patch(color = self.dataObj.params['plotting']['ecc_colors'][4],
+            handleA = mpatches.Patch(color = self.BehObj.dataObj.params['plotting']['ecc_colors'][4],
                                     label = '4 deg')
-            handleB = mpatches.Patch(color = self.dataObj.params['plotting']['ecc_colors'][8],
+            handleB = mpatches.Patch(color = self.BehObj.dataObj.params['plotting']['ecc_colors'][8],
                                     label = '8 deg')
-            handleC = mpatches.Patch(color = self.dataObj.params['plotting']['ecc_colors'][12],
+            handleC = mpatches.Patch(color = self.BehObj.dataObj.params['plotting']['ecc_colors'][12],
                                     label = '12 deg')
             ax1.legend(loc = 'upper left',fontsize=8, handles = [handleA, handleB, handleC], 
                                 title="Target ecc")#, fancybox=True)
@@ -327,7 +326,7 @@ class PlotsEye:
             corr_df4plotting = pd.DataFrame([])
 
             # loop over subjects
-            for _, pp in enumerate(self.dataObj.sj_num):
+            for _, pp in enumerate(self.BehObj.dataObj.sj_num):
 
                 # make temporary dataframe
                 tmp_df = df_mean_fixations[(df_mean_fixations['sj']== 'sub-{s}'.format(s = pp))]
@@ -344,7 +343,7 @@ class PlotsEye:
             g = sns.lmplot(
                 data = corr_df4plotting, x = 'critical_spacing', y = 'mean_fixations',markers = 'x',
                 col = 'target_ecc', row = 'set_size', height = 4, hue = 'target_ecc',
-                palette = [self.dataObj.params['plotting']['crwd_type_colors'][crowding_type]],
+                palette = [self.BehObj.dataObj.params['plotting']['crwd_type_colors'][crowding_type]],
                 facet_kws = dict(sharex = True, sharey = True)
             )
             
@@ -353,7 +352,7 @@ class PlotsEye:
             g.set(xlim=(.15, .71), ylim=(0, 18))
 
             ## set subplot titles
-            for ax, title in zip(g.axes[0], ['Target {e} deg'.format(e = e_num) for e_num in self.dataObj.ecc]):
+            for ax, title in zip(g.axes[0], ['Target {e} deg'.format(e = e_num) for e_num in self.BehObj.dataObj.ecc]):
                 ax.set_title(title, fontsize = 22, pad = 30)
                 ax.tick_params(axis='both', labelsize=14)
 
@@ -364,13 +363,13 @@ class PlotsEye:
                     cax.tick_params(axis='both', labelsize=14)
 
             # add row title
-            for ind, ax in enumerate([g.axes[i][-1] for i in range(len(self.dataObj.set_size))]): # last column
-                ax.text(.8, 9, '{s} items'.format(s = self.dataObj.set_size[ind]) , rotation = 0, fontsize = 22)
+            for ind, ax in enumerate([g.axes[i][-1] for i in range(len(self.BehObj.dataObj.set_size))]): # last column
+                ax.text(.8, 9, '{s} items'.format(s = self.BehObj.dataObj.set_size[ind]) , rotation = 0, fontsize = 22)
 
             ## add Spearman correlation value and p-val 
             # as annotation
-            for e_ind, ecc in enumerate(self.dataObj.ecc):
-                for ss_ind, ss in enumerate(self.dataObj.set_size):
+            for e_ind, ecc in enumerate(self.BehObj.dataObj.ecc):
+                for ss_ind, ss in enumerate(self.BehObj.dataObj.set_size):
                     rho, pval = scipy.stats.spearmanr(corr_df4plotting[(corr_df4plotting['target_ecc'] == ecc) & \
                                     (corr_df4plotting['set_size'] == ss)].mean_fixations.values, 
                                         corr_df4plotting[(corr_df4plotting['target_ecc'] == ecc) & \
@@ -383,7 +382,7 @@ class PlotsEye:
 
             if save_fig:
                 g.savefig(op.join(outdir, 'Nsj-{nr}_ses-{ses}_Fix_correlation_CS_{ct}.svg'.format(nr = self.nr_pp,
-                                                                                                ses = self.dataObj.session,
+                                                                                                ses = self.BehObj.dataObj.session,
                                                                                                 ct = crowding_type)),
                         bbox_inches='tight')
 
@@ -404,7 +403,7 @@ class PlotsEye:
             g.set(xlim=(.15, .75), ylim=(0, .4))
 
             ## set subplot titles
-            for ax, title in zip(g.axes[0], ['Target {e} deg'.format(e = e_num) for e_num in self.dataObj.ecc]):
+            for ax, title in zip(g.axes[0], ['Target {e} deg'.format(e = e_num) for e_num in self.BehObj.dataObj.ecc]):
                 ax.set_title(title, fontsize = 15, pad = 25)
 
             # remove unecessary title
@@ -413,13 +412,13 @@ class PlotsEye:
                     cax.set_title('')
 
             # add row title
-            for ind, ax in enumerate([g.axes[i][-1] for i in range(len(self.dataObj.set_size))]): # last column
-                ax.text(.8, .2, '{s} items'.format(s = self.dataObj.set_size[ind]) , rotation = 0, fontsize = 15)
+            for ind, ax in enumerate([g.axes[i][-1] for i in range(len(self.BehObj.dataObj.set_size))]): # last column
+                ax.text(.8, .2, '{s} items'.format(s = self.BehObj.dataObj.set_size[ind]) , rotation = 0, fontsize = 15)
 
             ## add Spearman correlation value and p-val 
             # as annotation
-            for e_ind, ecc in enumerate(self.dataObj.ecc):
-                for ss_ind, ss in enumerate(self.dataObj.set_size):
+            for e_ind, ecc in enumerate(self.BehObj.dataObj.ecc):
+                for ss_ind, ss in enumerate(self.BehObj.dataObj.set_size):
                     rho, pval = scipy.stats.spearmanr(corr_df4plotting[(corr_df4plotting['target_ecc'] == ecc) & \
                                     (corr_df4plotting['set_size'] == ss)].mean_fix_dur.values, 
                                         corr_df4plotting[(corr_df4plotting['target_ecc'] == ecc) & \
@@ -431,7 +430,7 @@ class PlotsEye:
 
             if save_fig:
                 g.savefig(op.join(outdir, 'Nsj-{nr}_ses-{ses}_correlations_DurFixations_CS-{ct}.png'.format(nr = self.nr_pp,
-                                                                                                        ses = self.dataObj.session,
+                                                                                                        ses = self.BehObj.dataObj.session,
                                                                                                         ct = crowding_type)))
 
     def plot_fixDTC_search(self, df_mean_fix_on_DISTfeatures = None, save_fig = True):
@@ -461,7 +460,7 @@ class PlotsEye:
             # RATIO OF DISTRACTOR FIXATIONS ON TARGET COLOR
             pt.RainCloud(data = fake_DF, #df_mean_fix_on_DISTfeatures, 
                         x = 'set_size', y = 'mean_percent_fix_on_DTC', pointplot = False, hue='target_ecc',
-                        palette = self.dataObj.params['plotting']['ecc_colors'],
+                        palette = self.BehObj.dataObj.params['plotting']['ecc_colors'],
                         linewidth = 1, alpha = .9, dodge = True, saturation = 1, 
                         point_size = 1.8, width_viol = 3,
                         width_box = .72, offset = 0.45, move = .8, jitter = 0.25,
@@ -483,11 +482,11 @@ class PlotsEye:
             ax1.axhline(.5, ls = '--', lw = 1, c = 'grey')
 
             # quick fix for legen
-            handleA = mpatches.Patch(color = self.dataObj.params['plotting']['ecc_colors'][4],
+            handleA = mpatches.Patch(color = self.BehObj.dataObj.params['plotting']['ecc_colors'][4],
                                     label = '4 deg')
-            handleB = mpatches.Patch(color = self.dataObj.params['plotting']['ecc_colors'][8],
+            handleB = mpatches.Patch(color = self.BehObj.dataObj.params['plotting']['ecc_colors'][8],
                                     label = '8 deg')
-            handleC = mpatches.Patch(color = self.dataObj.params['plotting']['ecc_colors'][12],
+            handleC = mpatches.Patch(color = self.BehObj.dataObj.params['plotting']['ecc_colors'][12],
                                     label = '12 deg')
             ax1.legend(loc = 'lower right',fontsize=8, handles = [handleA, handleB, handleC], 
                                 title="Target ecc")#, fancybox=True)
@@ -513,10 +512,10 @@ class PlotsEye:
             corr_df4plotting = pd.DataFrame([])
 
             # loop over subjects
-            for _, pp in enumerate(self.dataObj.sj_num):
+            for _, pp in enumerate(self.BehObj.dataObj.sj_num):
                 
                 # loop over ecc
-                for e in self.dataObj.ecc:
+                for e in self.BehObj.dataObj.ecc:
 
                     # make temporary dataframe
                     tmp_df = df_mean_DTC_ecc[(df_mean_DTC_ecc['sj'] == 'sub-{s}'.format(s = pp)) &\
@@ -532,7 +531,7 @@ class PlotsEye:
             # correlation scatter + linear regression
             g = sns.lmplot(data = corr_df4plotting, x = 'search_slope', y = 'mean_percent_fix_on_DTC',
                 height = 4, markers = 'x', col= 'target_ecc',
-                hue = 'target_ecc', palette = self.dataObj.params['plotting']['ecc_colors'],
+                hue = 'target_ecc', palette = self.BehObj.dataObj.params['plotting']['ecc_colors'],
                 facet_kws = dict(sharex = True, sharey = True)
             )
 
@@ -543,12 +542,12 @@ class PlotsEye:
             g.set(xlim=(0, 130), ylim=(0.67, 1))
 
             ## set subplot titles
-            for ax, title in zip(g.axes[0], ['{e} deg'.format(e = e) for e in self.dataObj.ecc]):
+            for ax, title in zip(g.axes[0], ['{e} deg'.format(e = e) for e in self.BehObj.dataObj.ecc]):
                 ax.set_title(title, fontsize = 22, pad = 30)
                 ax.tick_params(axis='both', labelsize=14)
 
             # plot rho per ecc
-            for ind, e in enumerate(self.dataObj.ecc):
+            for ind, e in enumerate(self.BehObj.dataObj.ecc):
                 rho, pval = scipy.stats.spearmanr(corr_df4plotting[corr_df4plotting['target_ecc'] == e].search_slope.values, 
                                                 corr_df4plotting[corr_df4plotting['target_ecc'] == e].mean_percent_fix_on_DTC.values)
 
@@ -566,7 +565,7 @@ class PlotsEye:
             # permutate correlations and plot distribution
             fig, ax1 = plt.subplots(1,3, figsize=(13, 5), dpi=100, facecolor='w', edgecolor='k', sharey = True)
 
-            for ind, e in enumerate(self.dataObj.ecc):
+            for ind, e in enumerate(self.BehObj.dataObj.ecc):
                 slope_arr = corr_df4plotting[corr_df4plotting['target_ecc'] == e].search_slope.values
                 DTC_arr = corr_df4plotting[corr_df4plotting['target_ecc'] == e].mean_percent_fix_on_DTC.values
 
@@ -578,7 +577,7 @@ class PlotsEye:
                                                                     perm_num=10000, seed = seed_num + ind,
                                                                     p_val_side='two-sided')
 
-                ax1[ind].hist(perm_rho, color = self.dataObj.params['plotting']['ecc_colors'][e], #'#7796a3', 
+                ax1[ind].hist(perm_rho, color = self.BehObj.dataObj.params['plotting']['ecc_colors'][e], #'#7796a3', 
                                 edgecolor='k', alpha=0.65,bins=50)
                 ax1[ind].axvline(rho, color='black', linestyle='dashed', linewidth=1.5)
                 ax1[ind].text(-.45, 550, 
@@ -594,7 +593,7 @@ class PlotsEye:
             ax1[0].set_ylabel('Frequency', fontsize=18, labelpad = 15)
 
             ## set subplot titles
-            for ax, title in zip(ax1, ['{e} deg'.format(e = e) for e in self.dataObj.ecc]):
+            for ax, title in zip(ax1, ['{e} deg'.format(e = e) for e in self.BehObj.dataObj.ecc]):
                 ax.set_title(title, fontsize = 22, pad = 30)
                 ax.tick_params(axis='both', labelsize=14)
                 ax.set(xlim=(-.5, .5))
@@ -612,9 +611,9 @@ class PlotsEye:
         """
 
         # gabor radius in pixels
-        r_gabor = (self.dataObj.params['stimuli']['size_deg']/2)/self.dataObj.get_dva_per_pix(height_cm = self.dataObj.params['monitor_extra']['height'], 
-                                                                     distance_cm = self.dataObj.params['monitor']['distance'], 
-                                                                     vert_res_pix = self.dataObj.params['window_extra']['size'][1])
+        r_gabor = (self.BehObj.dataObj.params['stimuli']['size_deg']/2)/self.BehObj.get_dva_per_pix(height_cm = self.BehObj.dataObj.params['monitor_extra']['height'], 
+                                                                                                distance_cm = self.BehObj.dataObj.params['monitor']['distance'], 
+                                                                                                vert_res_pix = self.BehObj.dataObj.params['window_extra']['size'][1])
 
         ## loop over blocks and trials
         for blk in eye_events_df.block_num.unique():
@@ -641,7 +640,7 @@ class PlotsEye:
 
         for crowding_type in crowding_type_list:
             # loop over subjects
-            for _, pp in enumerate(self.dataObj.sj_num):
+            for _, pp in enumerate(self.BehObj.dataObj.sj_num):
 
                 # make temporary dataframe
                 tmp_df = df_search_fix_slopes[(df_search_fix_slopes['sj']== 'sub-{s}'.format(s = pp))]
@@ -657,7 +656,7 @@ class PlotsEye:
         g = sns.lmplot(
             data = corr_fix_slope_df4plotting, x = 'critical_spacing', y = 'slope',
             col= 'crowding_type', height = 4, markers = 'x',
-            hue = 'crowding_type', palette = self.dataObj.params['plotting']['crwd_type_colors'],
+            hue = 'crowding_type', palette = self.BehObj.dataObj.params['plotting']['crwd_type_colors'],
             facet_kws = dict(sharex = True, sharey = True)
         )
 
@@ -686,7 +685,7 @@ class PlotsEye:
 
         if save_fig:
             g.savefig(op.join(outdir, 'Nsj-{nr}_ses-{ses}_Fix_slope_correlation_CS.svg'.format(nr = self.nr_pp,
-                                                                                                    ses = self.dataObj.session)),
+                                                                                                    ses = self.BehObj.dataObj.session)),
                     bbox_inches='tight')
                 
         ## permutate correlations and plot
@@ -705,7 +704,7 @@ class PlotsEye:
                                                                 perm_num=10000, seed = seed_num + ct_ind,
                                                                 p_val_side='two-sided')
             
-            ax1[ct_ind].hist(perm_rho, color = self.dataObj.params['plotting']['crwd_type_colors'][ct], 
+            ax1[ct_ind].hist(perm_rho, color = self.BehObj.dataObj.params['plotting']['crwd_type_colors'][ct], 
                             edgecolor='k', alpha=0.65,bins=50)
             ax1[ct_ind].axvline(rho, color='black', linestyle='dashed', linewidth=1.5)
             ax1[ct_ind].text(-.45, 550, 
@@ -728,7 +727,7 @@ class PlotsEye:
 
         if save_fig:
             fig.savefig(op.join(outdir, 'Nsj-{nr}_ses-{ses}_Fix_slope_correlation_CS_permutation.svg'.format(nr = self.nr_pp,
-                                                                                                            ses = self.dataObj.session)),
+                                                                                                            ses = self.BehObj.dataObj.session)),
                     bbox_inches='tight')
             
     def plot_correlations_RTFixRho_CS(self, df_CS = None, df_manual_responses = None, df_trl_fixations = None,
@@ -755,7 +754,7 @@ class PlotsEye:
         # build tidy dataframe with relevant info
         corr_df4plotting = pd.DataFrame([])
 
-        for pp in self.dataObj.sj_num:
+        for pp in self.BehObj.dataObj.sj_num:
             
             rho, pval = scipy.stats.spearmanr(joint_df[joint_df['sj'] == 'sub-{sj}'.format(sj = pp)].RT.values, 
                                         joint_df[joint_df['sj'] == 'sub-{sj}'.format(sj = pp)].nr_fixations.values)
@@ -767,7 +766,7 @@ class PlotsEye:
         g = sns.lmplot(data = corr_df4plotting, 
                         x = 'critical_spacing', y = 'rho', col = 'crowding_type', 
                         height = 4, markers = 'x',
-                        hue = 'crowding_type', palette = self.dataObj.params['plotting']['crwd_type_colors'],
+                        hue = 'crowding_type', palette = self.BehObj.dataObj.params['plotting']['crwd_type_colors'],
                         facet_kws = dict(sharex = True, sharey = True))
 
         # axis labels
@@ -791,7 +790,7 @@ class PlotsEye:
         
         if save_fig:
             g.savefig(op.join(outdir, 'Nsj-{nr}_ses-{ses}_RTFixRho_CS_correlations.svg'.format(nr = self.nr_pp,
-                                                                                            ses = self.dataObj.session)),
+                                                                                            ses = self.BehObj.dataObj.session)),
                     bbox_inches='tight')   
         
         ## permutate correlations and plot
@@ -810,7 +809,7 @@ class PlotsEye:
                                                                 perm_num=10000, seed = seed_num + ct_ind,
                                                                 p_val_side='two-sided')
             
-            ax1[ct_ind].hist(perm_rho, color = self.dataObj.params['plotting']['crwd_type_colors'][ct], 
+            ax1[ct_ind].hist(perm_rho, color = self.BehObj.dataObj.params['plotting']['crwd_type_colors'][ct], 
                             edgecolor='k', alpha=0.65,bins=50)
             ax1[ct_ind].axvline(rho, color='black', linestyle='dashed', linewidth=1.5)
             ax1[ct_ind].text(-.45, 550, 
@@ -833,7 +832,7 @@ class PlotsEye:
 
         if save_fig:
             fig.savefig(op.join(outdir, 'Nsj-{nr}_ses-{ses}_RTFixRho_CS_permutation.svg'.format(nr = self.nr_pp,
-                                                                                            ses = self.dataObj.session)),
+                                                                                            ses = self.BehObj.dataObj.session)),
                     bbox_inches='tight')  
             
 
@@ -861,7 +860,7 @@ class PlotsEye:
             corr_df4plotting = pd.DataFrame([])
 
             # loop over subjects
-            for _, pp in enumerate(self.dataObj.sj_num):
+            for _, pp in enumerate(self.BehObj.dataObj.sj_num):
 
                 # make temporary dataframe
                 tmp_df = df_mean_fixations[(df_mean_fixations['sj']== 'sub-{s}'.format(s = pp))]
@@ -891,7 +890,7 @@ class PlotsEye:
             if save_fig:
                 fig.savefig(op.join(outdir, 'Nsj-{nr}_ses-{ses}_{mt}_correlations_NumFixations_CS-{ct}_heatmap.png'.format(nr = self.nr_pp,
                                                                                                         mt = method,
-                                                                                                        ses = self.dataObj.session,
+                                                                                                        ses = self.BehObj.dataObj.session,
                                                                                                         ct = crowding_type)))
 
             ## plot same but for mean fixation duration
@@ -915,7 +914,7 @@ class PlotsEye:
             if save_fig:
                 fig.savefig(op.join(outdir, 'Nsj-{nr}_ses-{ses}_{mt}_correlations_DurFixations_CS-{ct}_heatmap.png'.format(nr = self.nr_pp,
                                                                                                         mt = method,
-                                                                                                        ses = self.dataObj.session,
+                                                                                                        ses = self.BehObj.dataObj.session,
                                                                                                         ct = crowding_type)))
 
     def plot_correlations_slopeNumFix_CS_heatmap(self, df_CS = None, df_search_fix_slopes = None, 
@@ -940,7 +939,7 @@ class PlotsEye:
             corr_slope_df4plotting = pd.DataFrame([])
 
             # loop over subjects
-            for _, pp in enumerate(self.dataObj.sj_num):
+            for _, pp in enumerate(self.BehObj.dataObj.sj_num):
 
                 # make temporary dataframe
                 tmp_df = df_search_fix_slopes[(df_search_fix_slopes['sj']== 'sub-{s}'.format(s = pp))]
@@ -973,5 +972,5 @@ class PlotsEye:
             if save_fig:
                 fig.savefig(op.join(outdir, 'Nsj-{nr}_ses-{ses}_{mt}_correlations_NumFixationsSlope_CS-{ct}_heatmap.png'.format(nr = self.nr_pp,
                                                                                                         mt = method,
-                                                                                                        ses = self.dataObj.session,
+                                                                                                        ses = self.BehObj.dataObj.session,
                                                                                                         ct = crowding_type)))

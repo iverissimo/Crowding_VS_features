@@ -79,7 +79,7 @@ crwd_plotter = plotting.PlotsBehavior(crowding_behaviour, outputdir = op.join(da
 search_plotter = plotting.PlotsBehavior(search_behaviour, outputdir = op.join(data_search.derivatives_pth, 
                                                                             'plots', 'search'))
 
-eye_plotter = eye_plotting.PlotsEye(data_search) # plotter for eye data of search
+eye_plotter = eye_plotting.PlotsEye(eye_search) # plotter for eye data of search
 
 ## Run specific command
 
