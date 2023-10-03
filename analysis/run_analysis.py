@@ -205,7 +205,7 @@ elif task == 'search':
         ## get search slopes
         search_behaviour.get_search_slopes(df_manual_responses = search_behaviour.df_manual_responses)
 
-        # plot
+        ## plot
         search_plotter.plot_RT_acc_search(df_manual_responses = search_behaviour.df_manual_responses,
                                     df_mean_results = search_behaviour.df_mean_results,
                                     df_search_slopes = search_behaviour.df_search_slopes, save_fig = True)
@@ -217,9 +217,28 @@ elif task == 'search':
             # and for all trials
             eye_search.get_search_trl_fixations(df_manual_responses = search_behaviour.df_manual_responses, exclude_target_fix = True)
 
-            # plot
+            ## plot
             eye_plotter.plot_fixations_search(df_trl_fixations = eye_search.df_trl_fixations,
                                                 df_mean_fixations = eye_search.df_mean_fixations, save_fig = True)
+        
+        elif py_cmd == 'fix_selectivity':
+            
+            # get all fixations for all trials, labeled by feature 
+            df_fixations_on_features = eye_search.get_ALLfix_on_features_df(df_manual_responses = search_behaviour.df_manual_responses,
+                                                                            exclude_target_fix = True)
+            
+            # get ratio of fixations on distractors that share target color
+            df_mean_fix_on_DISTfeatures = eye_search.get_mean_fix_on_DTC(df_fixations_on_features = df_fixations_on_features, per_set_size = True)
+
+            ## plot
+            eye_plotter.plot_fixDTC_search(df_mean_fix_on_DISTfeatures = df_mean_fix_on_DISTfeatures, save_fig = True)
+
+            # get ratio of fixations on distractors that share target color - aggregated across set size
+            df_mean_DTC_ecc = eye_search.get_mean_fix_on_DTC(df_fixations_on_features = df_fixations_on_features, per_set_size = False)
+
+            ## plot correlation between selectivity and efficiency
+            eye_plotter.plot_correlations_fixDTC_slopes_search(df_mean_DTC_ecc = df_mean_DTC_ecc, df_search_slopes = search_behaviour.df_search_slopes, 
+                                                                seed_num = 846, save_fig = True)
 
     elif py_cmd == 'scanpath': # plot saccade scan path for participant
 

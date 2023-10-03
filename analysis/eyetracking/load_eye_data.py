@@ -1181,6 +1181,65 @@ class EyeTrackVsearch(EyeTrack):
 
         return df_fixations_on_features
 
+    def get_mean_fix_on_DTC(self, df_fixations_on_features = None, per_set_size = True):
+
+        """
+        calculate ratio of distractor fixations that on distractors that share target color,
+        for each set size and ecc
+
+        """
+
+        df_mean_fix_on_DISTfeatures = pd.DataFrame({'sj': [],'target_ecc': [], 'set_size': [], 
+                                                'mean_percent_fix_on_DTC': [], 'mean_dur_DTC': [], 'mean_dist_DTC': []})
+
+        for pp in df_fixations_on_features.sj.unique():
+
+            # loop over ecc
+            for e in self.dataObj.ecc:
+
+                if per_set_size:
+                    # loop over set size
+                    for ss in self.dataObj.set_size:
+
+                        # participant fixations of feature
+                        pp_fof = df_fixations_on_features[(df_fixations_on_features['sj'] == pp) & \
+                                    (df_fixations_on_features['target_ecc'] == e) & \
+                                    (df_fixations_on_features['set_size'] == ss)]
+                        
+                        # on target
+                        pp_fof_T = pp_fof[pp_fof['fixation_object'] == 'T']
+                        # on DTC
+                        pp_fof_DTC = pp_fof[pp_fof['fixation_object'] == 'DTC']
+
+                        df_mean_fix_on_DISTfeatures = pd.concat((df_mean_fix_on_DISTfeatures,
+                                                            pd.DataFrame({'sj': [pp],
+                                                                        'target_ecc': [e], 
+                                                                        'set_size': [ss], 
+                                                                        'mean_percent_fix_on_DTC': [len(pp_fof_DTC)/(len(pp_fof) - len(pp_fof_T))],
+                                                                        'mean_dur_DTC': [np.nanmean(pp_fof_DTC.duration)],
+                                                                        'mean_dist_DTC': [np.nanmean(pp_fof_DTC.distance)]
+                                                                        })), ignore_index = True)
+                else:
+                    # participant fixations of feature
+                    pp_fof = df_fixations_on_features[(df_fixations_on_features['sj'] == pp) & \
+                                (df_fixations_on_features['target_ecc'] == e)]
+                    
+                    # on target
+                    pp_fof_T = pp_fof[pp_fof['fixation_object'] == 'T']
+                    # on DTC
+                    pp_fof_DTC = pp_fof[pp_fof['fixation_object'] == 'DTC']
+
+                    df_mean_fix_on_DISTfeatures = pd.concat((df_mean_fix_on_DISTfeatures,
+                                                        pd.DataFrame({'sj': [pp],
+                                                                    'target_ecc': [e], 
+                                                                    'set_size': [np.nan], 
+                                                                    'mean_percent_fix_on_DTC': [len(pp_fof_DTC)/(len(pp_fof) - len(pp_fof_T))],
+                                                                    'mean_dur_DTC': [np.nanmean(pp_fof_DTC.duration)],
+                                                                    'mean_dist_DTC': [np.nanmean(pp_fof_DTC.distance)]
+                                                                    })), ignore_index = True)
+
+        return df_mean_fix_on_DISTfeatures
+
 
     def get_OriVSdata_fixations(self, ecc = [4, 8, 12], setsize = [5,15,30], minRT = .250, max_RT = 5, 
                                 prev_vRes = 1050, prev_hRes=1680):

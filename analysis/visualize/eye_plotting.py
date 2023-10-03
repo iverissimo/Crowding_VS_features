@@ -134,7 +134,6 @@ class PlotsEye:
 
         f.savefig(op.join(outdir,'scanpath_block-{bn}_trial-{tn}.png'.format(bn = block_num, tn = trial_num)))
 
-
     def plot_fixations_search(self, df_trl_fixations = None,
                                     df_mean_fixations = None, save_fig = True):
         
@@ -306,7 +305,6 @@ class PlotsEye:
                                                                                                 ses = self.BehObj.dataObj.session, 
                                                                                                 task = self.BehObj.dataObj.task_name)),
                             bbox_inches='tight')
-
 
     def plot_correlations_Fix_CS(self, df_CS = None, df_mean_fixations = None, 
                                         crowding_type_list = ['orientation', 'color', 'conjunction'],
@@ -540,6 +538,176 @@ class PlotsEye:
             g.savefig(op.join(outdir, 'Nsj-{nr}_ses-{ses}_correlations_DurFixations_CS-mean.png'.format(nr = self.nr_pp,
                                                                                                     ses = self.dataObj.session)))
 
+    def plot_fixDTC_search(self, df_mean_fix_on_DISTfeatures = None, save_fig = True):
+
+        # if we have more than 1 participant data in object
+        if self.nr_pp > 1: # make group plot
+
+            ### plot main ratio DTC group figure ###
+            
+            # make fake dataframe, to fill with nans
+            # so we force plot to be in continuous x-axis
+            fake_ss = np.array([i for i in np.arange(int(self.BehObj.dataObj.set_size[-1])) if i not in self.BehObj.dataObj.set_size[:2]])
+
+            tmp_df = pd.DataFrame({'sj': [], 'target_ecc': [], 'set_size': [], 'mean_RT': [], 'accuracy': []})
+            for s in df_mean_fix_on_DISTfeatures.sj.unique():
+                
+                tmp_df = pd.concat((tmp_df,
+                                pd.DataFrame({'sj': np.repeat(s,len(np.repeat(fake_ss,3))), 
+                                                'target_ecc': np.tile(self.BehObj.dataObj.num_ecc,len(fake_ss)), 
+                                                'set_size': np.repeat(fake_ss,3), 
+                                                'mean_RT': np.repeat(np.nan,len(np.repeat(fake_ss,3))), 
+                                                'accuracy': np.repeat(np.nan,len(np.repeat(fake_ss,3)))})))
+            fake_DF = pd.concat((df_mean_fix_on_DISTfeatures,tmp_df))
+
+            fig, ax1 = plt.subplots(1,1, figsize=(9,3), dpi=1000, facecolor='w', edgecolor='k')
+
+            # RATIO OF DISTRACTOR FIXATIONS ON TARGET COLOR
+            pt.RainCloud(data = fake_DF, #df_mean_fix_on_DISTfeatures, 
+                        x = 'set_size', y = 'mean_percent_fix_on_DTC', pointplot = False, hue='target_ecc',
+                        palette = self.dataObj.params['plotting']['ecc_colors'],
+                        linewidth = 1, alpha = .9, dodge = True, saturation = 1, 
+                        point_size = 1.8, width_viol = 3,
+                        width_box = .72, offset = 0.45, move = .8, jitter = 0.25,
+                        ax = ax1)
+
+            ax1.set_xlabel('Set Size [items]', fontsize = 16, labelpad = 15)
+            ax1.set_ylabel('Ratio of Fixations on \nTarget-colored Distractors', fontsize = 16, labelpad = 10)
+            # set x ticks as integer
+            ax1.tick_params(axis='both', labelsize=14)
+            #ax1.xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(search_behaviour.dataObj.set_size[x]))) 
+            ax1.set_ylim(0.45,1.01)
+            ax1.set_xlim(5,33)
+
+            ax1.tick_params(axis='both', labelsize=14)
+            ax1.xaxis.set_ticks(np.arange(7, 33, 3))
+            ax1.set_xticklabels([str(i) for i in np.arange(7, 33, 3)])
+
+            # add horizontal line indicating selectivity threshold
+            ax1.axhline(.5, ls = '--', lw = 1, c = 'grey')
+
+            # quick fix for legen
+            handleA = mpatches.Patch(color = self.dataObj.params['plotting']['ecc_colors'][4],
+                                    label = '4 deg')
+            handleB = mpatches.Patch(color = self.dataObj.params['plotting']['ecc_colors'][8],
+                                    label = '8 deg')
+            handleC = mpatches.Patch(color = self.dataObj.params['plotting']['ecc_colors'][12],
+                                    label = '12 deg')
+            ax1.legend(loc = 'lower right',fontsize=8, handles = [handleA, handleB, handleC], 
+                                title="Target ecc")#, fancybox=True)
+
+            if save_fig:
+                fig.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_task-{task}_Fix_ratio_DTC.svg'.format(nr = self.nr_pp,
+                                                                                                ses = self.BehObj.dataObj.session, 
+                                                                                                task = self.BehObj.dataObj.task_name)),
+                            bbox_inches='tight')
+
+    def plot_correlations_fixDTC_slopes_search(self, df_mean_DTC_ecc = None, df_search_slopes = None, 
+                                                    seed_num = 846, save_fig = True):
+
+        """
+        Plot correlation between color selectivity and search efficiency (linear slopes)
+        per ecc
+        """
+
+        # if we have more than 1 participant data in object
+        if self.nr_pp > 1: # make group plot
+
+            # build tidy dataframe with relevant info
+            corr_df4plotting = pd.DataFrame([])
+
+            # loop over subjects
+            for _, pp in enumerate(self.dataObj.sj_num):
+                
+                # loop over ecc
+                for e in self.dataObj.ecc:
+
+                    # make temporary dataframe
+                    tmp_df = df_mean_DTC_ecc[(df_mean_DTC_ecc['sj'] == 'sub-{s}'.format(s = pp)) &\
+                                            (df_mean_DTC_ecc['target_ecc'] == e)]
+                    tmp_df['search_slope'] = df_search_slopes[(df_search_slopes['sj']== 'sub-{s}'.format(s = pp)) &\
+                                                            (df_search_slopes['target_ecc'] == e)].slope.values[0]
+                    # append
+                    corr_df4plotting = pd.concat((corr_df4plotting,
+                                                tmp_df.copy()))
+
+            ## actually plot
+
+            # correlation scatter + linear regression
+            g = sns.lmplot(data = corr_df4plotting, x = 'search_slope', y = 'mean_percent_fix_on_DTC',
+                height = 4, markers = 'x', col= 'target_ecc',
+                hue = 'target_ecc', palette = self.dataObj.params['plotting']['ecc_colors'],
+                facet_kws = dict(sharex = True, sharey = True)
+            )
+
+            # axis labels
+            g.set_axis_labels('RT/set size (ms/item)', 'Ratio of Fixations on \nTarget-colored Distractors', 
+                            fontsize = 18, labelpad=15)#, fontweight="bold")
+            #g.set_ylabel('Ratio of Fixations on \nTarget-colored Distractors', fontsize = 16, labelpad = 10)
+            g.set(xlim=(0, 130), ylim=(0.67, 1))
+
+            ## set subplot titles
+            for ax, title in zip(g.axes[0], ['{e} deg'.format(e = e) for e in self.dataObj.ecc]):
+                ax.set_title(title, fontsize = 22, pad = 30)
+                ax.tick_params(axis='both', labelsize=14)
+
+            # plot rho per ecc
+            for ind, e in enumerate(self.dataObj.ecc):
+                rho, pval = scipy.stats.spearmanr(corr_df4plotting[corr_df4plotting['target_ecc'] == e].search_slope.values, 
+                                                corr_df4plotting[corr_df4plotting['target_ecc'] == e].mean_percent_fix_on_DTC.values)
+
+                g.axes[0,ind].text(120, .7, 
+                            r"$\rho$ = {r}".format(r = '%.2f'%(rho)), #+\
+                            #'\n{p}'.format(p = '$\it{p}$ = ')+('%.3f'%(pval))[1:],
+                            horizontalalignment='right', fontsize = 16, weight='bold')
+
+            if save_fig:
+                g.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_task-{task}_RT_slope_correlation_Fix_ratio_DTC.svg'.format(nr = self.nr_pp,
+                                                                                                                                ses = self.BehObj.dataObj.session, 
+                                                                                                                                task = self.BehObj.dataObj.task_name)),
+                            bbox_inches='tight')
+                
+            # permutate correlations and plot distribution
+            fig, ax1 = plt.subplots(1,3, figsize=(13, 5), dpi=100, facecolor='w', edgecolor='k', sharey = True)
+
+            for ind, e in enumerate(self.dataObj.ecc):
+                slope_arr = corr_df4plotting[corr_df4plotting['target_ecc'] == e].search_slope.values
+                DTC_arr = corr_df4plotting[corr_df4plotting['target_ecc'] == e].mean_percent_fix_on_DTC.values
+
+                # get observed correlation value
+                rho, pval = scipy.stats.spearmanr(slope_arr, DTC_arr)
+
+                # get permutation values
+                perm_rho, pval_perm = utils.permutation_correlations(slope_arr, DTC_arr, method = 'spearman',
+                                                                    perm_num=10000, seed = seed_num + ind,
+                                                                    p_val_side='two-sided')
+
+                ax1[ind].hist(perm_rho, color = self.dataObj.params['plotting']['ecc_colors'][e], #'#7796a3', 
+                                edgecolor='k', alpha=0.65,bins=50)
+                ax1[ind].axvline(rho, color='black', linestyle='dashed', linewidth=1.5)
+                ax1[ind].text(-.45, 550, 
+                        #'observed\n'+\
+                    # r"$\rho$ = {r}".format(r = '%.2f'%(rho))+\
+                        '\n\npermutation'+\
+                    '\n{p}'.format(p = '$\it{p}$ = ')+('%.3f'%(pval_perm))[1:],
+                    horizontalalignment='left', fontsize = 14, weight='bold')
+
+                ax1[ind].set_xlabel('Permutation '+r"$\rho$", fontsize=18, labelpad = 15)
+
+            # axis labels
+            ax1[0].set_ylabel('Frequency', fontsize=18, labelpad = 15)
+
+            ## set subplot titles
+            for ax, title in zip(ax1, ['{e} deg'.format(e = e) for e in self.dataObj.ecc]):
+                ax.set_title(title, fontsize = 22, pad = 30)
+                ax.tick_params(axis='both', labelsize=14)
+                ax.set(xlim=(-.5, .5))
+
+            if save_fig:
+                fig.savefig(op.join(self.outputdir, 'Nsj-{nr}_ses-{ses}_task-{task}_RT_slope_permutations_Fix_ratio_DTC.svg'.format(nr = self.nr_pp,
+                                                                                                                                ses = self.BehObj.dataObj.session, 
+                                                                                                                                task = self.BehObj.dataObj.task_name)),
+                            bbox_inches='tight')
 
 
     def plot_correlations_slopeNumFix_CS(self, df_CS = None, df_search_fix_slopes = None, 
