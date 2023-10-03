@@ -694,6 +694,50 @@ class BehResponses:
 
         return ACC_DIFF
 
+    def calc_RT_split_half_reliability(self, df_manual_responses = None, iterations = 1000, seed_num = 29,
+                                            return_slopes_arr = False):
+
+        """
+        Calculate split-half reliability of search RT slopes, over iterations 
+        """
+
+        ## split half a few times, and 
+        # save values
+
+        all_slopes_p1 = []
+        all_slopes_p2 = []
+
+        rho_all = []
+
+        for i in range(iterations):
+
+            ## split half RT dataframe
+
+            half_1, half_2 = self.split_half_search_df(df_manual_responses, 
+                                                groub_by = ['target_ecc', 'set_size'], 
+                                                seed_num = seed_num+i)
+
+            ## get slopes for each half
+            self.get_search_slopes(df_manual_responses = half_1, per_ecc = False)
+            df_search_slopes_p1 = self.df_search_slopes
+
+            self.get_search_slopes(df_manual_responses = half_2, per_ecc = False)
+            df_search_slopes_p2 = self.df_search_slopes
+            
+            
+            ## now correlate both and see distribution
+            rho, _ = scipy.stats.spearmanr(df_search_slopes_p1.slope.values, df_search_slopes_p2.slope.values)
+            
+            ## append all iteration values
+            all_slopes_p1.append(df_search_slopes_p1.slope.values)
+            all_slopes_p2.append(df_search_slopes_p2.slope.values)
+            rho_all.append(rho)
+
+        if return_slopes_arr:
+            np.array(rho_all), df_search_slopes_p1, df_search_slopes_p2
+        else:
+            return np.array(rho_all)
+
 
     def calc_rsq(self, data_arr, pred_arr):
         return np.nan_to_num(1 - (np.nansum((data_arr - pred_arr)**2, axis=0)/ np.nansum(((data_arr - np.mean(data_arr))**2), axis=0)))

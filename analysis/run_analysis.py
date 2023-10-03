@@ -91,103 +91,74 @@ if task == 'both':
         checker = CheckData(crowding_behaviour, search_behaviour)
         checker.get_exclusion_csv(excl_file = op.join(data_search.derivatives_pth, 'excluded_participants.csv'))
 
-    elif py_cmd == 'correlations_RT':
-
-        # make plot dir, if it doesnt exist
-        plot_dir = op.join(data_search.derivatives_pth, 'plots', 'correlations')
-        os.makedirs(plot_dir, exist_ok=True)
-
-        # get search RTs for all trials
-        search_behaviour.get_RTs(missed_trl_thresh = data_search.params['visual_search']['missed_trl_thresh'], 
+    else:
+        # get RTs for all trials
+        search_behaviour.get_RTs(missed_trl_thresh = data_search.params['visual_search']['missed_trl_thresh'],
                                 exclude_outliers = True, threshold_std = 3)
-
+        
         # get mean RT and accuracy
         search_behaviour.get_meanRT(df_manual_responses = search_behaviour.df_manual_responses,
                                 acc_set_thresh = data_search.params['visual_search']['acc_set_thresh'],
                                 acc_total_thresh = data_search.params['visual_search']['acc_total_thresh'])
-
-        # get critical spacing for crowding
+        
+        ## get critical spacing for crowding
         crowding_behaviour.get_critical_spacing(num_trials = data_crowding.nr_trials_flank * data_crowding.ratio_trls_cs,
                                                 cs_min_thresh = data_crowding.params['crowding']['cs_min_thresh'],
                                                 cs_max_thresh = data_crowding.params['crowding']['cs_max_thresh'])
-
-        ### plot correlations of mean RT with CS
-        search_plotter.plot_correlations_RT_CS(df_CS = crowding_behaviour.df_CS, 
-                                                df_mean_results = search_behaviour.df_mean_results, 
-                                                crowding_type_list = data_crowding.crwd_type,
-                                                save_fig = True, outdir = plot_dir)
-
-        ### plot Person correlations of mean RT with CS in heatmap
-        search_plotter.plot_correlations_RT_CS_heatmap(df_CS = crowding_behaviour.df_CS, 
-                                                df_mean_results = search_behaviour.df_mean_results, 
-                                                crowding_type_list = data_crowding.crwd_type,
-                                                save_fig = True, outdir = plot_dir,
-                                                method = 'pearson')
-
-        # get search slopes
-        search_behaviour.get_search_slopes(df_manual_responses = search_behaviour.df_manual_responses)
-
-        ### plot correlations of mean RT slope with CS
-        search_plotter.plot_correlations_slopeRT_CS(df_CS = crowding_behaviour.df_CS, 
-                                                    df_search_slopes = search_behaviour.df_search_slopes, 
-                                                    crowding_type_list = data_crowding.crwd_type,
-                                                    save_fig = True, outdir = plot_dir)
-
-        search_plotter.plot_correlations_slopeRT_CS_heatmap(df_CS = crowding_behaviour.df_CS, 
-                                                    df_search_slopes = search_behaviour.df_search_slopes, 
-                                                    crowding_type_list = data_crowding.crwd_type,
-                                                    save_fig = True, outdir = plot_dir,
-                                                    method = 'pearson')
-
-    elif py_cmd == 'correlations_Fix':
 
         # make plot dir, if it doesnt exist
         plot_dir = op.join(data_search.derivatives_pth, 'plots', 'correlations')
         os.makedirs(plot_dir, exist_ok=True)
 
-        # get search RTs for all trials
-        search_behaviour.get_RTs(missed_trl_thresh = data_search.params['visual_search']['missed_trl_thresh'],
-                                exclude_outliers = True, threshold_std = 3)
+        if py_cmd == 'correlations_RT':
 
-        # get critical spacing for crowding
-        crowding_behaviour.get_critical_spacing(num_trials = data_crowding.nr_trials_flank * data_crowding.ratio_trls_cs,
-                                                cs_min_thresh = data_crowding.params['crowding']['cs_min_thresh'],
-                                                cs_max_thresh = data_crowding.params['crowding']['cs_max_thresh'])
+            ## plot correlations of mean RT with CS
+            search_plotter.plot_correlations_RT_CS(df_CS = crowding_behaviour.df_CS, 
+                                                    df_mean_results = search_behaviour.df_mean_results, 
+                                                    crowding_type_list = data_crowding.crwd_type,
+                                                    save_fig = True, outdir = plot_dir)
 
-        # get mean number of fixations for search
-        eye_search.get_search_mean_fixations(df_manual_responses = search_behaviour.df_manual_responses, exclude_target_fix = True)
+            # get search slopes - collapsing ecc
+            search_behaviour.get_search_slopes(df_manual_responses = search_behaviour.df_manual_responses, per_ecc = False)
 
-        ### plot correlations of Fixations with CS
-        eye_plotter.plot_correlations_Fix_CS(df_CS = crowding_behaviour.df_CS, 
+            ## plot correlations of search slopes with CS
+            search_plotter.plot_correlations_slopeRT_CS(df_CS = crowding_behaviour.df_CS, 
+                                                        df_search_slopes = search_behaviour.df_search_slopes, 
+                                                        crowding_type_list = data_crowding.crwd_type,
+                                                        save_fig = True, outdir = plot_dir,
+                                                        seed_num = 42)
+
+        elif py_cmd == 'correlations_Fix':
+
+            # get mean number of fixations for search
+            eye_search.get_search_mean_fixations(df_manual_responses = search_behaviour.df_manual_responses, exclude_target_fix = True)
+
+            ## plot correlations of Fixations with CS
+            eye_plotter.plot_correlations_Fix_CS(df_CS = crowding_behaviour.df_CS, 
                                                 df_mean_fixations = eye_search.df_mean_fixations, 
                                                 crowding_type_list = data_crowding.crwd_type,
                                                 save_fig = True, outdir = plot_dir)
 
-        ### plot Person correlations of Fixations with CS in heatmap
-        eye_plotter.plot_correlations_Fix_CS_heatmap(df_CS = crowding_behaviour.df_CS, 
-                                                df_mean_fixations = eye_search.df_mean_fixations, 
-                                                crowding_type_list = data_crowding.crwd_type,
-                                                save_fig = True, outdir = plot_dir,
-                                                method = 'pearson', BehObj = search_behaviour)
+            # get fixations for all trials
+            eye_search.get_search_trl_fixations(df_manual_responses = search_behaviour.df_manual_responses, exclude_target_fix = True)
 
-        # get fixations for all trials
-        eye_search.get_search_trl_fixations(df_manual_responses = search_behaviour.df_manual_responses, exclude_target_fix = True)
+            # get number of fixations per item (slope) - collapsing ecc
+            df_search_fix_slopes = eye_search.get_fix_slopes(eye_search.df_trl_fixations.dropna(), fix_nr = True,
+                                                            per_ecc = False)
 
-        # get number of fixations per item (slope)
-        df_search_fix_slopes = eye_search.get_fix_slopes(eye_search.df_trl_fixations.dropna(), fix_nr = True)
-
-        ## plot correlations of number of fixations per item with CS
-        eye_plotter.plot_correlations_slopeNumFix_CS(df_CS = crowding_behaviour.df_CS,  
-                                                df_search_fix_slopes = df_search_fix_slopes, 
-                                                crowding_type_list = data_crowding.crwd_type,
-                                                save_fig = True, outdir = plot_dir)
-
-        ### plot Person correlations of number of fixations per item with CS in heatmap
-        eye_plotter.plot_correlations_slopeNumFix_CS_heatmap(df_CS = crowding_behaviour.df_CS,  
-                                                df_search_fix_slopes = df_search_fix_slopes, 
-                                                crowding_type_list = data_crowding.crwd_type,
-                                                save_fig = True, outdir = plot_dir,
-                                                method = 'pearson', BehObj = search_behaviour)
+            ## plot correlations of number of fixations per item with CS
+            eye_plotter.plot_correlations_slopeNumFix_CS(df_CS = crowding_behaviour.df_CS,  
+                                                    df_search_fix_slopes = df_search_fix_slopes, 
+                                                    crowding_type_list = data_crowding.crwd_type,
+                                                    save_fig = True, outdir = plot_dir,
+                                                    seed_num = 24)
+            
+            ## plot RT-fix rho correlation with CS
+            eye_plotter.plot_correlations_RTFixRho_CS(df_CS = crowding_behaviour.df_CS, 
+                                                    df_manual_responses = search_behaviour.df_manual_responses, 
+                                                    df_trl_fixations = eye_search.df_trl_fixations,
+                                                    save_fig = True, outdir = plot_dir, 
+                                                    seed_num = 457)
 
 elif task == 'search':
     
@@ -200,7 +171,18 @@ elif task == 'search':
                             acc_set_thresh = data_search.params['visual_search']['acc_set_thresh'],
                             acc_total_thresh = data_search.params['visual_search']['acc_total_thresh'])
 
-    if py_cmd in ['RT', 'fix']:
+    if py_cmd in ['RT', 'fix', 'fix_selectivity', 'reliability']:
+
+        if py_cmd == 'reliability':
+            
+            ## get split-half reliability rho
+            rho_sh_RT, df_search_slopes_p1, df_search_slopes_p2 = search_behaviour.calc_RT_split_half_reliability(df_manual_responses = search_behaviour.df_manual_responses, 
+                                                                                                                iterations = 1000, seed_num = 29,
+                                                                                                                return_slopes_arr = True)
+            
+            ## plot
+            search_plotter.plot_RTreliability(rho_sh_RT = rho_sh_RT, save_fig = True, 
+                                              df_search_slopes_p1 = df_search_slopes_p1, df_search_slopes_p2 = df_search_slopes_p2)
 
         ## get search slopes
         search_behaviour.get_search_slopes(df_manual_responses = search_behaviour.df_manual_responses)
