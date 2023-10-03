@@ -709,6 +709,24 @@ class PlotsEye:
                                                                                                                                 task = self.BehObj.dataObj.task_name)),
                             bbox_inches='tight')
 
+    def plot_participant_scanpath_search(self, participant, eye_events_df = None, save_fig = True):
+
+        """
+        Plot scanpath for ALL search trials of participant
+        """
+
+        # gabor radius in pixels
+        r_gabor = (self.dataObj.params['stimuli']['size_deg']/2)/self.dataObj.get_dva_per_pix(height_cm = self.dataObj.params['monitor_extra']['height'], 
+                                                                     distance_cm = self.dataObj.params['monitor']['distance'], 
+                                                                     vert_res_pix = self.dataObj.params['window_extra']['size'][1])
+
+        ## loop over blocks and trials
+        for blk in eye_events_df.block_num.unique():
+            for trl in eye_events_df[eye_events_df['block_num'] == blk].trial.unique():
+                self.plot_search_saccade_path(participant, eye_events_df, 
+                                                trial_num = trl, block_num = blk, 
+                                                r_gabor = r_gabor, save_fig = save_fig)
+
 
     def plot_correlations_slopeNumFix_CS(self, df_CS = None, df_search_fix_slopes = None, 
                                         crowding_type_list = ['orientation', 'color', 'conjunction'],

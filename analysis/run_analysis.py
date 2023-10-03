@@ -242,35 +242,16 @@ elif task == 'search':
 
     elif py_cmd == 'scanpath': # plot saccade scan path for participant
 
-        # gabor radius in pixels
-        r_gabor = (data_search.params['stimuli']['size_deg']/2)/eye_search.get_dva_per_pix(height_cm = data_search.params['monitor_extra']['height'], 
-                                                                     distance_cm = data_search.params['monitor']['distance'], 
-                                                                     vert_res_pix = data_search.params['window_extra']['size'][1])
-
         if len(eye_search.dataObj.sj_num) > 1:
             print('WARNING: PLOTTING SCANPATHS OF SEVERAL PARTICIPANTS, might take a while...')
 
         for pp in eye_search.dataObj.sj_num:
             
             ## get all eye events (fixation and saccades)
-            eye_df_filename = op.join(eye_search.outdir, 'sub-{sj}_eye_events.csv'.format(sj = pp))
-            
-            if not op.isfile(eye_df_filename):
-                print('Getting eye events for sub-{sj}'.format(sj = pp))
-                eye_events_df = eye_search.get_eyelink_events(eye_search.EYEevents_files['sub-{sj}'.format(sj = pp)], 
-                                                        sampling_rate = 1000, 
-                                                        save_as = eye_df_filename)
-            else:
-                print('Loading %s'%eye_df_filename)
-                eye_events_df = pd.read_csv(eye_df_filename)
+            eye_events_df = eye_search.load_pp_eye_events_df(pp, sampling_rate = 1000)
 
-            # plot
-
-            ## loop over blocks and trials
-            for blk in eye_events_df.block_num.unique():
-                for trl in eye_events_df[eye_events_df['block_num'] == blk].trial.unique():
-                    eye_plotter.plot_search_saccade_path(pp, eye_events_df, 
-                                                trial_num = trl, block_num = blk, r_gabor = r_gabor, save_fig = True)
+            ## plot
+            eye_plotter.plot_participant_scanpath_search(pp, eye_events_df = eye_events_df, save_fig = True) 
 
 elif task == 'crowding':
 

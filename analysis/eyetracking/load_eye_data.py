@@ -1240,6 +1240,26 @@ class EyeTrackVsearch(EyeTrack):
 
         return df_mean_fix_on_DISTfeatures
 
+    def load_pp_eye_events_df(self, participant, sampling_rate = 1000):
+
+        """
+        Helper func to load participant eye event dataframe
+        """
+
+        ## get all eye events (fixation and saccades)
+        eye_df_filename = op.join(self.outdir, 'sub-{sj}_eye_events.csv'.format(sj = participant))
+        
+        if not op.isfile(eye_df_filename):
+            print('Getting eye events for sub-{sj}'.format(sj = participant))
+            eye_events_df = self.get_eyelink_events(self.EYEevents_files['sub-{sj}'.format(sj = participant)], 
+                                                    sampling_rate = sampling_rate, 
+                                                    save_as = eye_df_filename)
+        else:
+            print('Loading %s'%eye_df_filename)
+            eye_events_df = pd.read_csv(eye_df_filename)
+
+        return eye_events_df
+
 
     def get_OriVSdata_fixations(self, ecc = [4, 8, 12], setsize = [5,15,30], minRT = .250, max_RT = 5, 
                                 prev_vRes = 1050, prev_hRes=1680):
