@@ -1303,7 +1303,169 @@ class EyeTrackVsearch(EyeTrack):
         """
         count number of distractors in array that share the target feature
         """
+        ## transform to list, to avoid error when comparing
+        if isinstance(distr_feat_arr, np.ndarray):
+            distr_feat_arr = [list(val) for val in distr_feat_arr]
+
         return len([val for val in distr_feat_arr if str(val) == str(target_feat_arr)])
+
+    def get_pp_crowded_fix_df(self, all_fixation_df = None, pp_manual_response_df = None, pp_trial_info = None, pp_CS = None,
+                                    exclude_target_fix = True, sampling_rate = 1000, min_fix_start = .150):
+
+        """
+        Get dataframe that labels, for each trial and fixation, if participant was crowded.
+        while also giving info on the type of flankers within critical distance 
+        """
+
+        ## start empty DF
+        df_crowded_fix = pd.DataFrame({'sj': [], 'trial_num': [], 'block_num': [], 'target_ecc': [], 'set_size': [],
+                                    'mean_cs': [], 'critical_distance': [], 'fixation_rank': [], 'crowded_bool': [],
+                                    'nr_flankers': [], 'nr_flankers_TC': [], 'nr_flankers_TO': [], 'nr_flankers_NT': []})
+
+        # get number of blocks
+        nr_blocks = all_fixation_df.block_num.unique().astype(int)
+
+        # loop over ecc
+        for e in self.dataObj.ecc:
+            # loop over set size
+            for ss in self.dataObj.set_size:
+                for blk in nr_blocks:
+                    print('quantifying crowding magnitude of display for trials in block {blk}'.format(blk = blk))
+
+                    # get trial indices for block
+                    blk_trials = pp_manual_response_df[(pp_manual_response_df['block_num'] == blk) & \
+                                                    (pp_manual_response_df['target_ecc'] == e) & \
+                                                    (pp_manual_response_df['set_size'] == ss)].trial_num.values
+
+                    for t in blk_trials:
+                        ## fixations for this trial
+                        trl_fix_df = all_fixation_df[(all_fixation_df['block_num'] == blk) & \
+                                                    (all_fixation_df['trial'] == t)]
+                        
+                        ## get info about trial stimuli 
+                        trl_stimuli_dict = self.get_trl_stimuli_features(pp_trial_info, block_num = blk, trial_num = t)
+
+                        # if fixations on trial and we want to exclude fixations on target
+                        if not trl_fix_df.empty and exclude_target_fix: # if 
+
+                            # get x,y coordinates of last fixation
+                            fix_x = trl_fix_df.iloc[-1]['x_pos'] - self.hRes/2 # start x pos
+                            fix_y = trl_fix_df.iloc[-1]['y_pos'] - self.vRes/2; fix_y = -fix_y #start y pos
+                            
+                            # if last fixation on target, remove
+                            if ((trl_stimuli_dict['target']['coords'][0] - fix_x) ** 2 + (trl_stimuli_dict['target']['coords'][-1] - fix_y) ** 2) <= self.r_gabor ** 2:
+                                trl_fix_df = trl_fix_df.iloc[:-1] 
+
+                        # if fixations on trial  
+                        if not trl_fix_df.empty:
+
+                            # also remove fixations that are too quick
+                            trl_fix_df = trl_fix_df[(trl_fix_df['ev_start_sample'] > (min_fix_start * sampling_rate) + trl_fix_df['phase_start_sample'].values[0])]
+
+                            ## get x and y coordinates for all fixations in trial
+                            # convert fixation pos into same reference frame as stimuli in display
+                            trl_fix_df['x_pos'] -= self.hRes/2
+                            trl_fix_df['y_pos'] -= self.vRes/2
+                            trl_fix_df['y_pos'] *= -1
+
+                            # concatenate 0 position (start of trial)
+                            all_fix_pos = np.vstack(([0,0], trl_fix_df[['x_pos', 'y_pos']].to_numpy()))
+                        
+                        else: # we still want to calculate how crowded first fixation is
+                            all_fix_pos = np.zeros((1,2))
+
+                        ## iterate over fixation coordinates
+                        for fix_ind, fix_pos in enumerate(all_fix_pos):
+
+                            ## get critical distance
+                            critical_distance = self.get_critical_distance_fix(pp_CS = pp_CS, 
+                                                                            target_pos = trl_stimuli_dict['target']['coords'], 
+                                                                            fix_pos = fix_pos, dist_in_deg = False)
+
+                            ## find which distractors (if any) are within critical distance
+                            # get indices
+                            dist_ind_cs = self.find_distractors_in_CD(target_pos = trl_stimuli_dict['target']['coords'], 
+                                                                    distr_arr = trl_stimuli_dict['distractors']['coords'], 
+                                                                    critical_distance = critical_distance)
+                            
+                            # count number of flankers within critical distance (if any)
+                            if len(dist_ind_cs) == 0:
+                                nr_flankers_TC = 0
+                                nr_flankers_TO = 0
+                                nr_flankers_NT = 0
+                                crowded_bool = False
+                            else:
+                                nr_flankers_TC = self.count_nr_DTfeature(target_feat_arr = trl_stimuli_dict['target']['color'], 
+                                                                        distr_feat_arr = np.array(trl_stimuli_dict['distractors']['color'])[dist_ind_cs])
+                                nr_flankers_TO = self.count_nr_DTfeature(target_feat_arr = trl_stimuli_dict['target']['orientation'], 
+                                                                        distr_feat_arr = np.array(trl_stimuli_dict['distractors']['orientation'])[dist_ind_cs])
+                                nr_flankers_NT = len(dist_ind_cs) - (nr_flankers_TC + nr_flankers_TO)
+                                crowded_bool = True
+
+                            ## append DF
+                            df_crowded_fix = pd.concat((df_crowded_fix,
+                                                    pd.DataFrame({'sj': [pp_trial_info.sj[0]], 
+                                                                'trial_num': [t], 
+                                                                'block_num': [blk],  
+                                                                'target_ecc': [e], 
+                                                                'set_size': [ss], 
+                                                                'crowded_bool': [crowded_bool],
+                                                                'mean_cs': [pp_CS], 
+                                                                'critical_distance': [critical_distance],
+                                                                'fixation_rank': [fix_ind], 
+                                                                'nr_flankers': [len(dist_ind_cs)], 
+                                                                'nr_flankers_TC': [nr_flankers_TC], 
+                                                                'nr_flankers_TO': [nr_flankers_TO],
+                                                                'nr_flankers_NT': [nr_flankers_NT]})
+                                                                ), ignore_index = True)
+        
+        return df_crowded_fix
+
+    def get_crowd_display_ALLfix_df(self, df_manual_responses = None, df_CS = None, exclude_target_fix = True, sampling_rate = 1000, min_fix_start = .150):
+
+        """
+        Get dataframe with all participant labels, for each trial and fixation, identifying if display was crowded.
+        while also giving info on the type of flankers within critical distance 
+        """
+
+        # set up empty df
+        df_crowded_fix = pd.DataFrame()
+
+        ## loop over participants
+        for pp in self.dataObj.sj_num:
+
+            ## load eye events df (fixation and saccades) for participant
+            eye_events_df = self.load_pp_eye_events_df(pp, sampling_rate = sampling_rate)
+
+            ## participant trial info
+            pp_trial_info = self.dataObj.trial_info_df[self.dataObj.trial_info_df['sj'] == 'sub-{pp}'.format(pp = pp)]
+
+            ## select only correct trials for participant
+            pp_manual_response_df = df_manual_responses[(df_manual_responses['correct_response'] == 1) & \
+                                                        (df_manual_responses['sj'] == 'sub-{sj}'.format(sj = pp))]
+
+            ## select only fixations and times when 
+            # stimuli was displayed
+            all_fixation_df = eye_events_df[(eye_events_df['eye_event'] == 'FIX') & \
+                                        (eye_events_df['phase_name'] == 'stim')]
+            
+            ## participant critical spacing value
+            pp_CS = df_CS[df_CS['sj'] == 'sub-{sj}'.format(sj = pp)].critical_spacing.mean()
+
+            ## get crowding info on participant displays per fixation
+            print('Computing crowding level for sub-{pp}'.format(pp = pp))
+            pp_df_crowded_fix = self.get_pp_crowded_fix_df(all_fixation_df = all_fixation_df, 
+                                                    pp_manual_response_df = pp_manual_response_df, 
+                                                    pp_trial_info = pp_trial_info, 
+                                                    pp_CS = pp_CS,
+                                                    exclude_target_fix = exclude_target_fix, sampling_rate = sampling_rate, min_fix_start = min_fix_start)
+            
+            # append
+            df_crowded_fix = pd.concat((df_crowded_fix,pp_df_crowded_fix), ignore_index=True)
+
+        return df_crowded_fix
+
+
 
 
 
