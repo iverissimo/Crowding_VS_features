@@ -257,7 +257,7 @@ class PlotsEye:
                 
                 tmp_df = pd.concat((tmp_df,
                                 pd.DataFrame({'sj': np.repeat(s,len(np.repeat(fake_ss,3))), 
-                                                'target_ecc': np.tile(self.BehObj.dataObj.num_ecc,len(fake_ss)), 
+                                                'target_ecc': np.tile(self.BehObj.dataObj.ecc,len(fake_ss)), 
                                                 'set_size': np.repeat(fake_ss,3), 
                                                 'mean_fixations': np.repeat(np.nan,len(np.repeat(fake_ss,3))), 
                                                 'mean_fix_dur': np.repeat(np.nan,len(np.repeat(fake_ss,3)))})))

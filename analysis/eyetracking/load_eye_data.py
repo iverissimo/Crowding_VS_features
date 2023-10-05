@@ -1298,16 +1298,19 @@ class EyeTrackVsearch(EyeTrack):
         
         return trl_stimuli_dict
     
-    def count_nr_DTfeature(self, target_feat_arr = None, distr_feat_arr = None):
+    def count_nr_DTfeature(self, target_feat_arr = None, distr_feat_arr = None, same_feature = True):
 
         """
-        count number of distractors in array that share the target feature
+        count number of distractors in array that share the target feature (or not)
         """
         ## transform to list, to avoid error when comparing
-        if isinstance(distr_feat_arr, np.ndarray):
+        if isinstance(distr_feat_arr, np.ndarray) and len(distr_feat_arr.shape) > 1:
             distr_feat_arr = [list(val) for val in distr_feat_arr]
-
-        return len([val for val in distr_feat_arr if str(val) == str(target_feat_arr)])
+        
+        if same_feature:
+            return len([val for val in distr_feat_arr if str(val) == str(target_feat_arr)])
+        else:
+            return len([val for val in distr_feat_arr if str(val) != str(target_feat_arr)])
 
     def get_pp_crowded_fix_df(self, all_fixation_df = None, pp_manual_response_df = None, pp_trial_info = None, pp_CS = None,
                                     exclude_target_fix = True, sampling_rate = 1000, min_fix_start = .150):
@@ -1320,7 +1323,7 @@ class EyeTrackVsearch(EyeTrack):
         ## start empty DF
         df_crowded_fix = pd.DataFrame({'sj': [], 'trial_num': [], 'block_num': [], 'target_ecc': [], 'set_size': [],
                                     'mean_cs': [], 'critical_distance': [], 'fixation_rank': [], 'crowded_bool': [],
-                                    'nr_flankers': [], 'nr_flankers_TC': [], 'nr_flankers_TO': [], 'nr_flankers_NT': []})
+                                    'nr_flankers': [], 'nr_flankers_TC': [], 'nr_flankers_TO': [], 'nr_flankers_NTC': [], 'nr_flankers_NTO': []})
 
         # get number of blocks
         nr_blocks = all_fixation_df.block_num.unique().astype(int)
@@ -1392,14 +1395,21 @@ class EyeTrackVsearch(EyeTrack):
                             if len(dist_ind_cs) == 0:
                                 nr_flankers_TC = 0
                                 nr_flankers_TO = 0
-                                nr_flankers_NT = 0
+                                nr_flankers_NTC = 0
+                                nr_flankers_NTO = 0
                                 crowded_bool = False
                             else:
                                 nr_flankers_TC = self.count_nr_DTfeature(target_feat_arr = trl_stimuli_dict['target']['color'], 
                                                                         distr_feat_arr = np.array(trl_stimuli_dict['distractors']['color'])[dist_ind_cs])
+                                nr_flankers_NTC = self.count_nr_DTfeature(target_feat_arr = trl_stimuli_dict['target']['color'], 
+                                                                        distr_feat_arr = np.array(trl_stimuli_dict['distractors']['color'])[dist_ind_cs],
+                                                                        same_feature=False)
                                 nr_flankers_TO = self.count_nr_DTfeature(target_feat_arr = trl_stimuli_dict['target']['orientation'], 
                                                                         distr_feat_arr = np.array(trl_stimuli_dict['distractors']['orientation'])[dist_ind_cs])
-                                nr_flankers_NT = len(dist_ind_cs) - (nr_flankers_TC + nr_flankers_TO)
+                                nr_flankers_NTO = self.count_nr_DTfeature(target_feat_arr = trl_stimuli_dict['target']['orientation'], 
+                                                                        distr_feat_arr = np.array(trl_stimuli_dict['distractors']['orientation'])[dist_ind_cs],
+                                                                        same_feature=False)
+                                
                                 crowded_bool = True
 
                             ## append DF
@@ -1416,7 +1426,8 @@ class EyeTrackVsearch(EyeTrack):
                                                                 'nr_flankers': [len(dist_ind_cs)], 
                                                                 'nr_flankers_TC': [nr_flankers_TC], 
                                                                 'nr_flankers_TO': [nr_flankers_TO],
-                                                                'nr_flankers_NT': [nr_flankers_NT]})
+                                                                'nr_flankers_NTC': [nr_flankers_NTC],
+                                                                'nr_flankers_NTO': [nr_flankers_NTO]})
                                                                 ), ignore_index = True)
         
         return df_crowded_fix
@@ -1464,6 +1475,132 @@ class EyeTrackVsearch(EyeTrack):
             df_crowded_fix = pd.concat((df_crowded_fix,pp_df_crowded_fix), ignore_index=True)
 
         return df_crowded_fix
+
+    def get_percent_crowd_at_fixation(self, df_crowded_fix = None, fix_rank = 0):
+
+        """
+        Get percentage of trials that were crowded at a given fixation (default is first)
+        or if fix_rank = None will calculate percentage at ANY fixation
+        """
+
+        if fix_rank is None:
+            print('checking any given fixation')
+            ## check any fixation crowding 
+            df_ALL_fix = df_crowded_fix.groupby(['sj', 'trial_num', 'block_num', 
+                                                'target_ecc', 'set_size'])['crowded_bool'].sum().reset_index()
+            ## normalize crowded sum to get boolean again
+            df_ALL_fix.loc[df_ALL_fix['crowded_bool'] > 0, 'crowded_bool'] = 1
+
+            ## count number of trials that were crowded (or not) at any fixation
+            count_df = df_ALL_fix.groupby(['sj', 'target_ecc', 'set_size', 'crowded_bool']).count().reset_index()
+        else:
+            print('checking fixation nr %i'%fix_rank)
+            # select only first fixation 
+            df_single_fix = df_crowded_fix[(df_crowded_fix['fixation_rank'] == fix_rank)]
+
+            ## count number of trials that were crowded (or not) at specific fixation
+            count_df = df_single_fix.groupby(['sj', 'target_ecc', 'set_size', 'crowded_bool']).count().reset_index()
+
+        ## iterate over participants to get percentage of trials that were crowded at first fixation
+        df_percent_trl_crowded = pd.DataFrame({'sj': [],'target_ecc': [], 'set_size': [], 'percent_crowded': []})
+
+        ## loop over participants
+        for pp in self.dataObj.sj_num:
+            # loop over ecc
+            for e in self.dataObj.ecc:
+                # loop over set size
+                for ss in self.dataObj.set_size:
+                    ## participant df
+                    pp_count_df = count_df[(count_df['sj'] == 'sub-{sj}'.format(sj = pp)) &\
+                                            (count_df['target_ecc'] == e) &\
+                                            (count_df['set_size'] == ss)]
+                    
+                    if pp_count_df[pp_count_df['crowded_bool'] == 1].empty:
+                        perc_val = 0
+                    elif pp_count_df[pp_count_df['crowded_bool'] == 0].empty:
+                        perc_val = 1
+                    else:
+                        total_trials = pp_count_df[pp_count_df['crowded_bool'] == 1].trial_num.values[0] + pp_count_df[pp_count_df['crowded_bool'] == 0].trial_num.values[0]
+                        perc_val = pp_count_df[pp_count_df['crowded_bool'] == 1].trial_num.values[0]/total_trials
+                        
+                    ## append
+                    df_percent_trl_crowded = pd.concat((df_percent_trl_crowded,
+                                                    pd.DataFrame({'sj': ['sub-{sj}'.format(sj = pp)],
+                                                                    'target_ecc': [e], 
+                                                                    'set_size': [ss], 
+                                                                    'percent_crowded': [perc_val * 100]})), ignore_index = True)
+
+        return df_percent_trl_crowded
+    
+    def get_percent_homogeneous_crowd_at_fixation(self, df_crowded_fix = None, fix_rank = 0):
+
+        """
+        Get percentage of trials that were HOMOGENEOUSLY (color and ori) crowded at a given fixation (default is first)
+        or if fix_rank = None will calculate percentage at ANY fixation
+        """
+
+        if fix_rank is None:
+            print('checking any given fixation')
+            ## check any fixation crowding 
+            df_fix = df_crowded_fix.groupby(['sj', 'trial_num', 'block_num', 
+                                                'target_ecc', 'set_size'])['crowded_bool'].sum().reset_index()
+            ## normalize crowded sum to get boolean again
+            df_fix.loc[df_fix['crowded_bool'] > 0, 'crowded_bool'] = 1
+            
+            ## choose only crowded trials
+            df_fix = df_fix[df_fix['crowded_bool'] == 1]
+
+        else:
+            print('checking fixation nr %i'%fix_rank)
+            # select only first fixation and only crowded trials
+            df_fix = df_crowded_fix[(df_crowded_fix['fixation_rank'] == fix_rank) & (df_crowded_fix['crowded_bool'] == 1)]
+
+        ## iterate over participants to get percentage of trials that had only homogenous color distractors
+        df_homogeneous_features_trl_crowded = pd.DataFrame({'sj': [],'target_ecc': [], 'set_size': [], 'percent_color': [],  'percent_ori': []})
+
+        ## loop over participants
+        for pp in self.dataObj.sj_num:
+            # loop over ecc
+            for e in self.dataObj.ecc:
+                # loop over set size
+                for ss in self.dataObj.set_size:
+                    ## participant df
+                    pp_count_df = df_fix[(df_fix['sj'] == 'sub-{sj}'.format(sj = pp)) &\
+                                        (df_fix['target_ecc'] == e) &\
+                                        (df_fix['set_size'] == ss)]
+                    
+                    if pp_count_df.empty:
+                        perc_color = 0
+                        perc_ori = 0
+                    else:
+                        total_trials = len(pp_count_df) ## total crowded trials
+
+                        # color homogeneous trials
+                        nr_flank_homo_color = len(pp_count_df[(pp_count_df['nr_flankers_TC'] > 0) & (pp_count_df['nr_flankers_NTC'] == 0)]) +\
+                                                len(pp_count_df[(pp_count_df['nr_flankers_NTC'] > 0) & (pp_count_df['nr_flankers_TC'] == 0)])
+                        
+                        # orientation homogeneous trials
+                        nr_flank_homo_ori = len(pp_count_df[(pp_count_df['nr_flankers_TO'] > 0) & (pp_count_df['nr_flankers_NTO'] == 0)]) +\
+                                                len(pp_count_df[(pp_count_df['nr_flankers_NTO'] > 0) & (pp_count_df['nr_flankers_TO'] == 0)])
+                        
+                        perc_color = nr_flank_homo_color/total_trials
+                        perc_ori = nr_flank_homo_ori/total_trials
+                                            
+                    ## append
+                    df_homogeneous_features_trl_crowded = pd.concat((df_homogeneous_features_trl_crowded,
+                                                                    pd.DataFrame({'sj': ['sub-{sj}'.format(sj = pp)],
+                                                                                    'target_ecc': [e], 
+                                                                                    'set_size': [ss], 
+                                                                                    'percent_color': [perc_color * 100],  
+                                                                                    'percent_ori': [perc_ori * 100]})), ignore_index = True)
+
+        return df_homogeneous_features_trl_crowded
+
+
+
+
+
+
 
 
 
